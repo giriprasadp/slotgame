@@ -1,0 +1,33 @@
+# ── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ─────────────────────────────────────────────────────────────
+dist/
+
+# ── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# Keep .env.example (template) — never ignore it
+!.env.example
+
+# ── RSA keys (never commit private keys) ─────────────────────────────────────
+keys/*.pem
+# Keep the placeholder so the keys/ dir is tracked
+!keys/.gitkeep
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+
+# ── TypeScript cache ─────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

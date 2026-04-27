@@ -1,0 +1,70 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  Huff & Puff — root .gitignore
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+**/dist/
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# Keep templates
+!.env.example
+!**/.env.example
+
+# ── RSA / JWT keys (never commit private keys) ────────────────────────────────
+backend/keys/*.pem
+# Keep placeholder so keys/ directory is tracked
+!backend/keys/.gitkeep
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+**/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── TypeScript build cache ────────────────────────────────────────────────────
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# ── Vite dev-server cache ─────────────────────────────────────────────────────
+.vite/
+**/.vite/
+
+# ── Test & coverage ───────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+
+# ── Docker / CI temp ─────────────────────────────────────────────────────────
+.docker/
+
+# ── Temp demo — not for production ───────────────────────────────────────────
+temp demo client/
+
+# ── OS artifacts ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~

@@ -1,0 +1,5 @@
+# Keys directory — RSA key pair for JWT RS256
+# Generate with: npm run keys:generate
+
+# This file is a placeholder to keep the directory in Git.
+# The actual .pem files are gitignored.

@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1C1414" />
+  <meta name="description" content="Huff and Puff — Cascading Morph Slot. 3×5 grid, 10 paylines, Free Spins, Wheel Feature." />
+  <title>Huff &amp; Puff — Cascading Morph Slot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- Skip links (spec §9 — WCAG 2.1 AA) -->
+<a class="skip-link" href="#game-canvas">Skip to reels</a>
+<a class="skip-link" href="#btn-spin">Skip to spin button</a>
+<a class="skip-link" href="#btn-settings">Open game menu</a>
+
+<!-- SCR-UNSUPPORTED — shown by JS if WebGL 2 unavailable (spec §3.17) -->
+<div id="unsupported-screen" class="scr-unsupported hidden" role="main" aria-live="assertive">
+  <div class="scr-unsupported-card">
+    <h1 class="scr-unsupported-title">Browser Not Supported</h1>
+    <p class="scr-unsupported-body">Huff &amp; Puff requires:</p>
+    <ul class="scr-unsupported-list">
+      <li>Chrome 100+ / Safari 15+ / Edge 100+ / Firefox 102+</li>
+      <li>WebGL 2.0 support enabled</li>
+    </ul>
+    <p id="unsupported-browser-info" class="scr-unsupported-ua"></p>
+    <button class="btn-secondary" onclick="window.history.back()">Exit to Lobby</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCR-LOADING — Boot Loader  (spec §3.1)
+═══════════════════════════════════════════════════════════════ -->
+<div id="splash" class="splash" role="status" aria-label="Loading Huff and Puff">
+  <div class="splash-inner">
+    <div class="splash-brand">
+      <div class="splash-wolf" aria-hidden="true">🐺</div>
+      <h1 class="splash-title">HUFF &amp; PUFF</h1>
+      <p class="splash-sub">CASCADING MORPH SLOT</p>
+    </div>
+
+    <div class="splash-tip-wrap" aria-live="polite">
+      <p id="splash-tip" class="splash-tip">Free Spins trigger on 3 Scatters anywhere on the reels</p>
+    </div>
+
+    <div class="splash-loader-group">
+      <div class="splash-loader"
+           role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+           aria-label="Loading progress">
+        <div id="splash-bar" class="splash-bar"></div>
+      </div>
+      <p id="splash-status" class="splash-status">Connecting to server…</p>
+    </div>
+
+    <button id="tap-to-play" class="btn-tap-to-play hidden" aria-label="Tap to start game">
+      ▶&nbsp;&nbsp;TAP TO PLAY
+    </button>
+
+    <p class="splash-footer">© 2026 Juego Studioz · 18+ · Play Responsibly</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN APPLICATION SHELL
+═══════════════════════════════════════════════════════════════ -->
+<div id="app" class="app hidden">
+
+  <!-- ───────────────────────────────────────────────────────
+       TOP HUD  (spec §3.2 desktop/mobile layouts)
+       Left: back · BAL · WIN · NET     Right: utility icons
+  ─────────────────────────────────────────────────────────── -->
+  <header class="hud-top" role="banner">
+
+    <div class="hud-left">
+      <button id="btn-home" class="hud-btn hud-back" aria-label="Return to lobby" title="Lobby (Esc)">
+        <span class="icon-back" aria-hidden="true">&#8249;</span>
+      </button>
+
+      <div class="hud-stats" role="group" aria-label="Game statistics">
+        <div class="hud-stat">
+          <span class="hud-lbl">BAL</span>
+          <span id="balance" class="hud-val" aria-live="polite" aria-label="Balance">50,000</span>
+        </div>
+        <div class="hud-divider" aria-hidden="true"></div>
+        <div class="hud-stat">
+          <span class="hud-lbl">WIN</span>
+          <span id="last-win" class="hud-val hud-win" aria-live="polite" aria-label="Last win">0</span>
+        </div>
+        <div class="hud-divider" aria-hidden="true"></div>
+        <div class="hud-stat">
+          <span class="hud-lbl">NET</span>
+          <span id="session-net" class="hud-val" aria-live="polite" aria-label="Session net">0</span>
+        </div>
+        <div class="hud-divider" aria-hidden="true"></div>
+        <!-- Session-time chip  (spec J.3 regulatory requirement) -->
+        <button id="session-time-chip" class="hud-session-chip"
+                aria-label="Session time — tap for reality check" title="Session time (tap for reality check)">
+          <span class="hud-lbl">TIME</span>
+          <span id="session-time-val" class="hud-val">0:00</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hud-title" aria-hidden="true">HUFF&nbsp;&amp;&nbsp;PUFF</div>
+
+    <div class="hud-right" role="group" aria-label="Menu controls">
+      <button id="btn-info"       class="hud-btn" aria-label="Game rules / info" title="Info &amp; Rules (I)">ℹ</button>
+      <button id="btn-history"    class="hud-btn" aria-label="Spin history"      title="History (H)">📊</button>
+      <button id="btn-paytable"   class="hud-btn" aria-label="Open paytable"     title="Paytable (P)">🎴</button>
+      <button id="btn-settings"   class="hud-btn" aria-label="Open settings"     title="Settings">⚙</button>
+      <button id="btn-sound"      class="hud-btn" aria-label="Sound on"          title="Sound (M)" data-muted="false">🔊</button>
+      <button id="btn-fullscreen" class="hud-btn" aria-label="Toggle fullscreen"  title="Fullscreen (F)">⛶</button>
+    </div>
+
+  </header>
+
+  <!-- ───────────────────────────────────────────────────────
+       MULTIPLIER LADDER  (spec §3.2 sm-mult)
+       Persistent 4-step indicator: ×1 ─ ×2 ─ ×3 ─ ×5
+       Active nodes light up as the chain multiplier advances.
+  ─────────────────────────────────────────────────────────── -->
+  <div class="mult-ladder" id="mult-ladder" role="presentation" aria-label="Multiplier progression">
+    <span class="mult-lbl">MULTIPLIER</span>
+    <div class="mult-track">
+      <div class="mult-node" id="mult-step-0" aria-label="Times one"><span>×1</span></div>
+      <div class="mult-line" id="mult-line-0" aria-hidden="true"></div>
+      <div class="mult-node" id="mult-step-1" aria-label="Times two"><span>×2</span></div>
+      <div class="mult-line" id="mult-line-1" aria-hidden="true"></div>
+      <div class="mult-node" id="mult-step-2" aria-label="Times three"><span>×3</span></div>
+      <div class="mult-line" id="mult-line-2" aria-hidden="true"></div>
+      <div class="mult-node" id="mult-step-3" aria-label="Times five"><span>×5</span></div>
+    </div>
+    <!-- Pop badge: hides at rest, pops on multiplier advance -->
+    <div id="multiplier-badge" class="multiplier-badge hidden" aria-live="assertive" aria-atomic="true">
+      ×<span id="multiplier-value">1</span>
+    </div>
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       FREE SPINS BANNER  (spec §3.3, hidden until FS active)
+  ─────────────────────────────────────────────────────────── -->
+  <div id="fs-banner" class="fs-banner hidden" role="status" aria-live="polite" aria-label="Free spins in progress">
+    <div class="fs-block fs-block-badge">
+      <span class="fs-badge-text">FREE SPINS</span>
+      <!-- fs-retrigger-ind: shown for 2.5s on retrigger (spec §3.3) -->
+      <span id="fs-retrigger-ind" class="fs-retrigger-ind hidden" aria-live="assertive">🔄 RETRIGGER!</span>
+    </div>
+    <div class="fs-block fs-block-counter">
+      <span class="fs-lbl">SPINS LEFT</span>
+      <strong id="fs-remaining" class="fs-counter-val">10</strong>
+    </div>
+    <div class="fs-sep" aria-hidden="true"></div>
+    <div class="fs-block fs-block-total">
+      <span class="fs-lbl">TOTAL WIN</span>
+      <span id="fs-total" class="fs-total-val">0</span>
+    </div>
+    <!-- fs-skip: Skip Animation button (spec §3.3 — replaces Buy in FS) -->
+    <button id="btn-fs-skip" class="fs-skip-btn" aria-label="Skip remaining free spin animations">SKIP ANIMS</button>
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       REEL STAGE  (spec §3.2 sm-reels)
+  ─────────────────────────────────────────────────────────── -->
+  <main class="stage" role="main" id="reel-stage">
+    <canvas id="game-canvas"
+            aria-label="Slot machine reels, 3 rows by 5 columns"
+            role="img"></canvas>
+  </main>
+
+  <!-- ───────────────────────────────────────────────────────
+       WIN FEEDBACK STRIP  (spec §3.2 desktop wireframe)
+       Shows last-win prominently · payline dots · stake
+  ─────────────────────────────────────────────────────────── -->
+  <div class="win-strip" aria-label="Spin results">
+    <div class="ws-group">
+      <span class="ws-lbl">LAST WIN</span>
+      <span id="win-amount" class="ws-val ws-win" aria-live="polite">0</span>
+    </div>
+    <div class="ws-center" aria-hidden="true">
+      <div class="payline-dots">
+        <span class="pl-dot active"></span><span class="pl-dot active"></span>
+        <span class="pl-dot active"></span><span class="pl-dot active"></span>
+        <span class="pl-dot active"></span><span class="pl-dot active"></span>
+        <span class="pl-dot active"></span><span class="pl-dot active"></span>
+        <span class="pl-dot active"></span><span class="pl-dot active"></span>
+      </div>
+      <span class="pl-label">10 PAYLINES</span>
+    </div>
+    <div class="ws-group ws-group-right">
+      <span class="ws-lbl">STAKE</span>
+      <span id="stake-display" class="ws-val" aria-live="polite">100</span>
+    </div>
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────
+       BOTTOM HUD  (spec §3.2 — three zones)
+       Bet zone | Spin zone | Actions zone
+  ─────────────────────────────────────────────────────────── -->
+  <footer class="hud-bot" role="contentinfo">
+
+    <!-- Zone 1: Bet controls -->
+    <div class="bet-zone" role="group" aria-label="Bet controls">
+      <button id="btn-bet-minus" class="bet-btn"     aria-label="Decrease bet" title="Bet down (↓)">−</button>
+      <div class="bet-display">
+        <div class="bet-lbl">BET</div>
+        <div id="bet-value" class="bet-val" aria-live="polite" aria-label="Current bet">100</div>
+        <div class="bet-sub">LVL&nbsp;<span id="bet-level">4</span></div>
+      </div>
+      <button id="btn-bet-plus" class="bet-btn"     aria-label="Increase bet" title="Bet up (↑)">+</button>
+      <button id="btn-bet-max"  class="bet-btn bet-max" aria-label="Maximum bet" title="Max bet">MAX</button>
+    </div>
+
+    <!-- Zone 2: Spin button (primary CTA, ≥ 96 dp per spec §5.1) -->
+    <div class="spin-zone">
+      <button id="btn-spin" class="btn-spin" aria-label="Spin (Space)" title="Spin (Space / Enter)">
+        SPIN
+      </button>
+    </div>
+
+    <!-- Zone 3: Secondary actions -->
+    <div class="actions-zone" role="group" aria-label="Spin options">
+      <button id="btn-auto"     class="action-pill"          aria-label="Open autoplay"    title="Autoplay (A)">
+        <span class="ap-title">AUTO</span>
+      </button>
+      <button id="btn-quick"    class="action-pill"          aria-label="Toggle turbo"     title="Turbo (T)">
+        <span class="ap-title">TURBO</span>
+      </button>
+      <button id="btn-open-buy" class="action-pill buy-pill" aria-label="Buy feature"      title="Buy Feature (B)">
+        <span class="ap-title">BUY</span>
+        <span class="ap-sub">FEATURE</span>
+      </button>
+    </div>
+
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════
+       OVERLAYS  (z-index 800, spec §3)
+  ═══════════════════════════════════════════════════════════ -->
+
+  <!-- OVL-BIGWIN / OVL-HUGEWIN / OVL-MEGAWIN  (spec §3.2 OVL-BIGWIN) -->
+  <div id="celebration" class="ov-celebration hidden" role="dialog" aria-modal="true" aria-label="Big win celebration">
+    <canvas class="celebration-canvas" aria-hidden="true"></canvas>
+    <div class="celebration-inner">
+      <div id="celebration-tier"   class="celebration-tier">BIG WIN</div>
+      <div id="celebration-amount" class="celebration-amount" aria-live="assertive">0</div>
+      <p class="celebration-hint" id="celebration-hint">Tap anywhere to continue</p>
+      <div id="celebration-auto-badge" class="celebration-auto-badge hidden"></div>
+    </div>
+  </div>
+
+  <!-- OVL-FS-INTRO / OVL-FS-OUTRO  (spec §4.3) -->
+  <div id="feature-overlay" class="ov-feature hidden" role="dialog" aria-modal="true">
+    <div class="ov-feature-card">
+      <div id="feature-title" class="ov-feature-title">FREE SPINS</div>
+      <div id="feature-desc"  class="ov-feature-desc">You have won 10 free spins — watch them play out.</div>
+      <button id="feature-ok" class="btn-primary btn-xl">START</button>
+    </div>
+  </div>
+
+  <!-- SCR-WHEEL  (spec §3.4) -->
+  <div id="wheel-overlay" class="ov-wheel hidden" role="dialog" aria-modal="true" aria-label="Wheel of Fortune feature">
+    <div class="ov-wheel-inner">
+      <h2 class="ov-wheel-title">WHEEL OF FORTUNE</h2>
+      <div class="ov-wheel-canvas-wrap">
+        <canvas id="wheel-canvas" width="520" height="520" aria-label="Spinning prize wheel"></canvas>
+      </div>
+      <div id="wheel-result" class="ov-wheel-result" aria-live="assertive" aria-atomic="true"></div>
+    </div>
+  </div>
+
+  <!-- OVL-FS-INTRO  (spec §7 overlay inventory — shown when FS triggered) -->
+  <div id="fs-intro-overlay" class="ov-fs-intro hidden" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Free spins awarded">
+    <div class="ov-fs-intro-inner">
+      <div class="ov-fs-intro-title" id="fs-intro-title">FREE SPINS!</div>
+      <div class="ov-fs-intro-spins" id="fs-intro-spins">10</div>
+      <div class="ov-fs-intro-sub">spins awarded</div>
+      <button id="fs-intro-ok" class="btn-primary btn-xl">START</button>
+    </div>
+  </div>
+
+  <!-- OVL-FS-OUTRO  (spec §7 — shown when FS round ends) -->
+  <div id="fs-outro-overlay" class="ov-fs-outro hidden" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Free spins complete">
+    <div class="ov-fs-outro-inner">
+      <div class="ov-fs-outro-title">FREE SPINS COMPLETE</div>
+      <div class="ov-fs-outro-total" id="fs-outro-total" aria-live="assertive">0</div>
+      <div class="ov-fs-outro-sub">coins won</div>
+      <button id="fs-outro-ok" class="btn-primary btn-xl">COLLECT</button>
+    </div>
+  </div>
+
+  <!-- OVL-AUTOPLAY-END  (spec §7 — shown when autoplay completes all spins) -->
+  <div id="autoplay-end-overlay" class="ov-autoplay-end hidden" role="dialog" aria-modal="true" aria-live="polite" aria-label="Autoplay complete">
+    <div class="ov-autoplay-end-inner">
+      <div class="ov-autoplay-end-title">AUTOPLAY COMPLETE</div>
+      <div class="ov-autoplay-end-stats" id="autoplay-end-stats"></div>
+      <button id="autoplay-end-ok" class="btn-primary">OK</button>
+    </div>
+  </div>
+
+  <!-- OVL-DEMO-WATERMARK  (spec §3.15 SCR-DEMO — shown in demo mode) -->
+  <div id="demo-watermark" class="demo-watermark hidden" aria-hidden="true">DEMO MODE — not for real money</div>
+
+  <!-- OVL-TUTORIAL  (spec §1.3 / §3.15 — first-time only, 3 steps) -->
+  <div id="tutorial-overlay" class="ov-tutorial hidden" role="dialog" aria-modal="true" aria-labelledby="tut-title" aria-live="polite">
+    <div class="ov-tutorial-inner">
+      <button id="tut-skip" class="ov-tutorial-skip btn-ghost" aria-label="Skip tutorial">Skip</button>
+      <div class="ov-tutorial-steps">
+        <div class="ov-tutorial-step" id="tut-step-1">
+          <div class="ov-tutorial-icon" aria-hidden="true">🎰</div>
+          <h2 class="ov-tutorial-title" id="tut-title">Tap to Spin</h2>
+          <p class="ov-tutorial-body">Tap the big button to spin the reels.</p>
+        </div>
+        <div class="ov-tutorial-step hidden" id="tut-step-2">
+          <div class="ov-tutorial-icon" aria-hidden="true">💰</div>
+          <h2 class="ov-tutorial-title">Balance &amp; Bet</h2>
+          <p class="ov-tutorial-body">These numbers are your balance and bet amount.</p>
+        </div>
+        <div class="ov-tutorial-step hidden" id="tut-step-3">
+          <div class="ov-tutorial-icon" aria-hidden="true">⭐</div>
+          <h2 class="ov-tutorial-title">Match to Win</h2>
+          <p class="ov-tutorial-body">Match symbols across the reels to win coins.</p>
+        </div>
+      </div>
+      <div class="ov-tutorial-footer">
+        <div class="ov-tutorial-dots" aria-hidden="true">
+          <span class="ov-tutorial-dot active" id="tut-dot-0"></span>
+          <span class="ov-tutorial-dot" id="tut-dot-1"></span>
+          <span class="ov-tutorial-dot" id="tut-dot-2"></span>
+        </div>
+        <button id="tut-next" class="btn-primary btn-xl">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVL-WHEEL-INTRO  (spec §4.4 — triggered when wheel feature fires) -->
+  <div id="wheel-intro-overlay" class="ov-wheel-intro hidden" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Wheel of Fortune intro">
+    <div class="ov-wheel-intro-inner">
+      <div class="ov-wheel-intro-icon" aria-hidden="true">🎡</div>
+      <h2 class="ov-wheel-intro-title">WHEEL OF FORTUNE!</h2>
+      <p class="ov-wheel-intro-sub">You've triggered the Wheel — watch it spin!</p>
+      <button id="wheel-intro-skip" class="ov-wheel-intro-skip btn-ghost hidden" aria-label="Skip intro">Skip</button>
+    </div>
+  </div>
+
+  <!-- OVL-WHEEL-OUTRO  (spec §4.4 — shown after wheel sub-bonus completes) -->
+  <div id="wheel-outro-overlay" class="ov-wheel-outro hidden" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Wheel feature complete">
+    <div class="ov-wheel-outro-inner">
+      <h2 class="ov-wheel-outro-title">WHEEL COMPLETE</h2>
+      <div class="ov-wheel-outro-total" id="wheel-outro-total" aria-live="assertive">0</div>
+      <div class="ov-wheel-outro-sub">coins won</div>
+      <button id="wheel-outro-ok" class="btn-primary btn-xl">COLLECT</button>
+    </div>
+  </div>
+
+  <!-- Sub-bonus overlay: SCR-JACKPOT / SCR-MANSION / SCR-BUZZSAW / SCR-MEGAHAT -->
+  <div id="bonus-overlay" class="ov-bonus hidden" role="dialog" aria-modal="true" aria-label="Bonus result">
+    <div id="bonus-inner" class="ov-bonus-inner"></div>
+  </div>
+
+  <!-- OVL-MAXWIN  (spec §7 — max win cap reached, cannot skip, game locks) -->
+  <div id="maxwin-overlay" class="ov-maxwin hidden" role="alertdialog" aria-modal="true" aria-live="assertive" aria-labelledby="mxw-heading">
+    <canvas class="maxwin-canvas" aria-hidden="true"></canvas>
+    <div class="maxwin-inner">
+      <div class="maxwin-tier" id="mxw-heading">MAX WIN</div>
+      <div class="maxwin-amount" id="mxw-amount" aria-live="assertive">0</div>
+      <p class="maxwin-subtitle">10,000× your bet — maximum win reached!</p>
+      <button id="mxw-collect" class="btn-primary btn-xl">COLLECT</button>
+    </div>
+  </div>
+
+  <!-- OVL-FEATURE-COMPLETE  (spec §7 — shown after any feature ends, 2.5s, tap to dismiss) -->
+  <div id="feature-complete-overlay" class="ov-feature-complete hidden" role="dialog" aria-modal="true" aria-labelledby="fc-heading">
+    <div class="ov-fc-inner">
+      <div id="fc-heading" class="ov-fc-title">FEATURE COMPLETE</div>
+      <div id="fc-total" class="ov-fc-amount" aria-live="assertive">0</div>
+      <p class="ov-fc-label">Total Feature Win</p>
+      <p class="ov-fc-hint">Tap anywhere to continue</p>
+    </div>
+  </div>
+
+  <!-- OVL-MAINT-WARNING  (spec §7 — scheduled maintenance, 10s, cannot skip) -->
+  <div id="maint-warning-ovl" class="ovl-maint hidden" role="alertdialog" aria-modal="true" aria-live="assertive" aria-labelledby="mw-heading">
+    <div class="ovl-maint-inner">
+      <div class="ovl-maint-icon" aria-hidden="true">🔧</div>
+      <h2 id="mw-heading" class="ovl-maint-title">MAINTENANCE SOON</h2>
+      <p class="ovl-maint-body">The game will be briefly taken offline. Your progress is saved.</p>
+      <div class="ovl-maint-countdown" id="mw-countdown" aria-live="polite">10</div>
+    </div>
+  </div>
+
+  <!-- OVL-RECONNECT  (spec §7 / §4.12) — shown after 3s of disconnect -->
+  <div id="reconnect-overlay" class="ov-reconnect hidden" role="alertdialog" aria-modal="true"
+       aria-labelledby="rc-ovl-heading" aria-live="assertive">
+    <div class="ov-reconnect-card">
+      <div class="ov-reconnect-spinner" aria-hidden="true"></div>
+      <h2 id="rc-ovl-heading" class="ov-reconnect-title">Reconnecting…</h2>
+      <p id="reconnect-msg" class="ov-reconnect-msg">Connection lost. Please wait.</p>
+      <button id="btn-reconnect-retry" class="btn-primary">Retry now</button>
+    </div>
+  </div>
+
+  <!-- OVL-IDLE-REMINDER  (spec §7) — 5 min inactivity -->
+  <div id="idle-overlay" class="ov-idle hidden" role="alertdialog" aria-modal="true"
+       aria-labelledby="idle-heading" aria-live="polite">
+    <div class="ov-idle-card">
+      <p id="idle-heading" class="ov-idle-msg">Still there? Your session will end soon.</p>
+      <button id="btn-idle-dismiss" class="btn-primary">I’m still here</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODALS  (z-index 750, spec §4)
+  ═══════════════════════════════════════════════════════════ -->
+
+  <!-- SCR-BUYFEATURE — Buy Feature panel  (spec §3.9) -->
+  <div id="buy-feature-panel" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bf-title">
+    <div class="modal-inner bf-inner">
+      <div class="modal-head">
+        <span id="bf-title">BUY FEATURE</span>
+        <button id="buy-panel-close" class="hud-btn" aria-label="Close buy feature">✕</button>
+      </div>
+      <div class="bf-body">
+
+        <div class="buy-card" id="buy-card-fs">
+          <div class="buy-card-top">
+            <span class="buy-card-icon" aria-hidden="true">🎰</span>
+            <div class="buy-card-info">
+              <div class="buy-card-name">FREE SPINS</div>
+              <div class="buy-card-desc">10 spins · ×2 → ×10 multiplier ladder</div>
+            </div>
+          </div>
+          <div class="buy-card-cost">
+            Cost: <strong>75× Bet =</strong>&nbsp;<span id="buy-fs-cost" class="buy-card-price">7,500</span>
+          </div>
+          <button id="btn-buy-fs" class="btn-primary buy-card-btn" aria-label="Buy Free Spins, hold to confirm">
+            HOLD&nbsp;TO&nbsp;BUY
+          </button>
+          <p id="bf-fs-unaffordable" class="bf-unaffordable hidden" aria-live="polite">Insufficient balance</p>
+        </div>
+
+        <div class="buy-card" id="buy-card-wheel">
+          <div class="buy-card-top">
+            <span class="buy-card-icon" aria-hidden="true">🎡</span>
+            <div class="buy-card-info">
+              <div class="buy-card-name">WHEEL BONUS</div>
+              <div class="buy-card-desc">Instant Wheel spin · Grand 2,000× stake</div>
+            </div>
+          </div>
+          <div class="buy-card-cost">
+            Cost: <strong>50× Bet =</strong>&nbsp;<span id="buy-wheel-cost" class="buy-card-price">5,000</span>
+          </div>
+          <button id="btn-buy-wheel" class="btn-primary buy-card-btn" aria-label="Buy Wheel feature, hold to confirm">
+            HOLD&nbsp;TO&nbsp;BUY
+          </button>
+          <p id="bf-wheel-unaffordable" class="bf-unaffordable hidden" aria-live="polite">Insufficient balance</p>
+        </div>
+
+        <p class="bf-notice">⚠ Not available during Free Spins or Autoplay</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-BUY-CONFIRM  (spec §4.9 — 1s hold-to-confirm ring) -->
+  <div id="buy-confirm" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bc-title">
+    <div class="modal-inner bc-inner">
+      <div class="modal-head">
+        <span id="bc-title">CONFIRM PURCHASE</span>
+        <button id="buy-close" class="hud-btn" aria-label="Cancel purchase">✕</button>
+      </div>
+      <div class="bc-body">
+        <div id="buy-desc"  class="bc-desc">Buy 10 Free Spins</div>
+        <div id="buy-price" class="bc-price">Cost: 7,500 coins</div>
+        <button id="buy-hold" class="hold-btn" aria-label="Hold to confirm purchase">
+          <div class="hold-ring" aria-hidden="true"></div>
+          <span class="hold-label">HOLD&nbsp;TO<br>CONFIRM</span>
+        </button>
+        <p class="bc-hint">Hold the button for 1.2 seconds to confirm</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCR-PAYTABLE  (spec §3.10 — 6 tabbed pages) -->
+  <div id="paytable" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pt-heading">
+    <div class="modal-inner pt-inner">
+      <div class="modal-head">
+        <span id="pt-heading">PAYTABLE</span>
+        <button id="pt-close" class="hud-btn" aria-label="Close paytable">✕</button>
+      </div>
+      <div class="pt-nav-bar">
+        <button id="pt-page-prev" class="pt-nav-btn" aria-label="Previous page" disabled>‹</button>
+        <div id="pt-page-indicator" class="pt-page-dots" aria-label="Page indicator"></div>
+        <button id="pt-page-next" class="pt-nav-btn" aria-label="Next page">›</button>
+      </div>
+      <div id="pt-bet-reference" class="pt-bet-ref" aria-live="polite"></div>
+      <nav class="pt-tabs" role="tablist" aria-label="Paytable sections">
+        <button class="pt-tab active" data-tab="0" role="tab" aria-selected="true">Symbols</button>
+        <button class="pt-tab"        data-tab="1" role="tab" aria-selected="false">Specials</button>
+        <button class="pt-tab"        data-tab="2" role="tab" aria-selected="false">Multipliers</button>
+        <button class="pt-tab"        data-tab="3" role="tab" aria-selected="false">Features</button>
+        <button class="pt-tab"        data-tab="4" role="tab" aria-selected="false">Paylines</button>
+        <button class="pt-tab"        data-tab="5" role="tab" aria-selected="false">Rules &amp; RTP</button>
+      </nav>
+      <div id="pt-body" class="pt-body" role="tabpanel"></div>
+    </div>
+  </div>
+
+  <!-- SCR-SETTINGS  (spec §3.13) — 5 tabs: Audio · Gameplay · Accessibility · Limits · About -->
+  <div id="settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="st-heading">
+    <div class="modal-inner st-inner">
+      <div class="modal-head">
+        <span id="st-heading">SETTINGS</span>
+        <button id="set-close" class="hud-btn" aria-label="Close settings">✕</button>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="st-tabs" role="tablist" aria-label="Settings categories">
+        <button class="st-tab-btn active" role="tab" aria-selected="true"  aria-controls="st-panel-audio"    id="st-tab-audio">Audio</button>
+        <button class="st-tab-btn"        role="tab" aria-selected="false" aria-controls="st-panel-gameplay" id="st-tab-gameplay">Gameplay</button>
+        <button class="st-tab-btn"        role="tab" aria-selected="false" aria-controls="st-panel-a11y"     id="st-tab-a11y">Access.</button>
+        <button class="st-tab-btn"        role="tab" aria-selected="false" aria-controls="st-panel-limits"   id="st-tab-limits">Limits</button>
+        <button class="st-tab-btn"        role="tab" aria-selected="false" aria-controls="st-panel-about"    id="st-tab-about">About</button>
+      </div>
+
+      <!-- ── Audio ── -->
+      <div class="st-tab-panel" id="st-panel-audio" role="tabpanel" aria-labelledby="st-tab-audio">
+        <label class="st-row">
+          <span class="st-lbl">Master Volume</span>
+          <input id="set-master" type="range" min="0" max="100" value="100" aria-label="Master volume, 100 percent" />
+          <span id="set-master-val" class="st-val">100%</span>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Music Volume</span>
+          <input id="set-music" type="range" min="0" max="100" value="80" aria-label="Music volume, 80 percent" />
+          <span id="set-music-val" class="st-val">80%</span>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">SFX Volume</span>
+          <input id="set-sfx" type="range" min="0" max="100" value="90" aria-label="Sound effects volume, 90 percent" />
+          <span id="set-sfx-val" class="st-val">90%</span>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Ambient Volume</span>
+          <input id="set-ambient" type="range" min="0" max="100" value="60" aria-label="Ambient volume, 60 percent" />
+          <span id="set-ambient-val" class="st-val">60%</span>
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Mute on Background</span>
+          <input id="set-mute" type="checkbox" checked aria-label="Mute when tab in background" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Voice Announcer</span>
+          <input id="set-voice-ann" type="checkbox" aria-label="Voice announcer for wins" />
+        </label>
+      </div>
+
+      <!-- ── Gameplay ── -->
+      <div class="st-tab-panel hidden" id="st-panel-gameplay" role="tabpanel" aria-labelledby="st-tab-gameplay">
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Turbo Default</span>
+          <input id="set-quick" type="checkbox" aria-label="Enable turbo spin by default" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Skip Stop</span>
+          <input id="set-skipstop" type="checkbox" checked aria-label="Enable skip stop mid-spin" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Quickspin</span>
+          <input id="set-quickspin" type="checkbox" aria-label="Quickspin cuts win animations" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Spacebar Spins</span>
+          <input id="set-spacebar" type="checkbox" checked aria-label="Space bar triggers spin" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Show Session Net</span>
+          <input id="set-show-net" type="checkbox" checked aria-label="Show session net in HUD" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Autoplay Bet Lock</span>
+          <input id="set-autobet-lock" type="checkbox" checked aria-label="Lock bet during autoplay" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Confirm High Bet</span>
+          <input id="set-confirm-bigbet" type="checkbox" aria-label="Confirm bet at or above 5 dollars" />
+        </label>
+      </div>
+
+      <!-- ── Accessibility ── -->
+      <div class="st-tab-panel hidden" id="st-panel-a11y" role="tabpanel" aria-labelledby="st-tab-a11y">
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Reduce Motion</span>
+          <input id="set-reduce-motion" type="checkbox" aria-label="Reduce animations" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">High Contrast</span>
+          <input id="set-high-contrast" type="checkbox" aria-label="Enable high contrast mode" />
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Colorblind Mode</span>
+          <select id="set-colorblind" class="st-select" aria-label="Colorblind mode">
+            <option value="">Off</option>
+            <option value="protanopia">Protanopia</option>
+            <option value="deuteranopia">Deuteranopia</option>
+            <option value="tritanopia">Tritanopia</option>
+          </select>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Text Size</span>
+          <select id="set-text-size" class="st-select" aria-label="Text size">
+            <option value="small">Small (0.9×)</option>
+            <option value="medium" selected>Medium (1.0×)</option>
+            <option value="large">Large (1.15×)</option>
+            <option value="xl">Extra Large (1.3×)</option>
+          </select>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Focus Ring</span>
+          <select id="set-focus-ring" class="st-select" aria-label="Focus ring thickness">
+            <option value="2" selected>2 px</option>
+            <option value="3">3 px</option>
+            <option value="4">4 px</option>
+          </select>
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Audio Win Cues</span>
+          <input id="set-audio-cues" type="checkbox" aria-label="Audio-only win cues (beeps)" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">SR Verbose</span>
+          <input id="set-sr-verbose" type="checkbox" aria-label="Screen reader verbose mode" />
+        </label>
+        <label class="st-row st-toggle-row">
+          <span class="st-lbl">Dwell Click</span>
+          <input id="set-dwell" type="checkbox" aria-label="Dwell click — 600 ms hover triggers action" />
+        </label>
+      </div>
+
+      <!-- ── Limits ── -->
+      <div class="st-tab-panel hidden" id="st-panel-limits" role="tabpanel" aria-labelledby="st-tab-limits">
+        <label class="st-row">
+          <span class="st-lbl">Session Time</span>
+          <select id="set-session-time" class="st-select" aria-label="Session time limit">
+            <option value="0" selected>No limit</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">60 min</option>
+            <option value="120">120 min</option>
+          </select>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Reality Check</span>
+          <select id="set-rg-interval" class="st-select" aria-label="Reality check interval">
+            <option value="30">Every 30 min</option>
+            <option value="60" selected>Every 60 min</option>
+            <option value="90">Every 90 min</option>
+          </select>
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Session Loss Limit</span>
+          <input id="set-loss-limit" type="number" min="0" step="1" placeholder="No limit" class="st-input-amount" aria-label="Session loss limit amount" />
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Daily Loss Limit</span>
+          <input id="rg-loss-limit-daily" type="number" min="0" step="1" placeholder="No limit" class="st-input-amount" aria-label="Daily loss limit amount" />
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Weekly Loss Limit</span>
+          <input id="rg-loss-limit-weekly" type="number" min="0" step="1" placeholder="No limit" class="st-input-amount" aria-label="Weekly loss limit amount" />
+        </label>
+        <label class="st-row">
+          <span class="st-lbl">Session Win Limit</span>
+          <input id="set-win-limit" type="number" min="0" step="1" placeholder="No limit" class="st-input-amount" aria-label="Session win limit amount" />
+        </label>
+        <div class="st-row st-row-plain">
+          <span class="st-lbl">Deposit Limit</span>
+          <a id="rg-deposit-limit" href="#" class="st-rg-link" rel="noopener" aria-label="Set deposit limit via cashier">Set via Cashier →</a>
+        </div>
+        <div class="st-rg-selfexclude-row">
+          <button id="rg-selfexclude-24h"  class="btn-secondary st-rg-excl-btn" aria-label="Take a 24-hour break from gambling">24h Break</button>
+          <button id="rg-selfexclude-30d"  class="btn-secondary st-rg-excl-btn" aria-label="Self-exclude for 30 days">30-day Exclude</button>
+          <button id="rg-selfexclude-perm" class="btn-danger    st-rg-excl-btn" aria-label="Permanent self-exclusion">Permanent Exclude</button>
+        </div>
+        <a id="rg-help-link" href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" class="st-rg-link">🛡&nbsp;Problem Gambling Help — BeGambleAware.org</a>
+      </div>
+
+      <!-- ── About ── -->
+      <div class="st-tab-panel hidden" id="st-panel-about" role="tabpanel" aria-labelledby="st-tab-about">
+        <div class="st-about-grid">
+          <span class="st-about-lbl">Game Version</span><span class="st-about-val" id="st-version">v1.0.0</span>
+          <span class="st-about-lbl">RTP</span><span class="st-about-val">96.10%</span>
+          <span class="st-about-lbl">Volatility</span><span class="st-about-val">High</span>
+          <span class="st-about-lbl">Max Win</span><span class="st-about-val">10,000×</span>
+          <span class="st-about-lbl">Hit Frequency</span><span class="st-about-val">~26.5%</span>
+        </div>
+        <label class="st-row">
+          <span class="st-lbl">Language</span>
+          <select id="set-lang" class="st-select" aria-label="Select language">
+            <option value="en-US" selected>English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="fr-FR">Fran&ccedil;ais</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="es-ES">Espa&ntilde;ol</option>
+            <option value="it-IT">Italiano</option>
+            <option value="pt-BR">Portugu&ecirc;s (BR)</option>
+            <option value="nl-NL">Nederlands</option>
+            <option value="sv-SE">Svenska</option>
+            <option value="tr-TR">T&uuml;rk&ccedil;e</option>
+            <option value="ja-JP">&#26085;&#26412;&#35486;</option>
+            <option value="ko-KR">&#54620;&#44397;&#50612;</option>
+          </select>
+        </label>
+        <p class="st-legal">Malfunction voids all pays and plays. 18+ only. Play responsibly.</p>
+        <div class="st-about-links">
+          <a href="#" class="st-about-link" rel="noopener">Terms &amp; Conditions</a>
+          <a href="#" class="st-about-link" rel="noopener">Privacy Policy</a>
+          <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" class="st-about-link">Responsible Gambling</a>
+          <a href="#" class="st-about-link" rel="noopener">Contact Support</a>
+        </div>
+        <button id="set-restart" class="btn-danger st-restart-btn" aria-label="Restart game economy to starting balance">
+          ↺&nbsp;Restart Economy
+        </button>
+        <div class="st-action-row">
+          <button id="st-reset" class="btn-ghost" aria-label="Reset all settings to defaults">Reset to Defaults</button>
+          <button id="st-save" class="btn-primary hidden" aria-label="Save settings changes">Save</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MOD-AUTOPLAY-CONFIG  (spec §4.10) -->
+  <div id="autoplay-config" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ap-heading">
+    <div class="modal-inner ap-inner">
+      <div class="modal-head">
+        <span id="ap-heading">AUTOPLAY</span>
+        <button id="auto-close" class="hud-btn" aria-label="Close autoplay">✕</button>
+      </div>
+      <div class="ap-body">
+
+        <section class="ap-section">
+          <h3 class="ap-section-title">NUMBER OF SPINS</h3>
+          <div class="auto-pills" role="group" aria-label="Select spin count">
+            <button class="auto-pill"        data-count="10"  aria-pressed="false">10</button>
+            <button class="auto-pill active" data-count="25"  aria-pressed="true">25</button>
+            <button class="auto-pill"        data-count="50"  aria-pressed="false">50</button>
+            <button class="auto-pill"        data-count="100" aria-pressed="false">100</button>
+            <button class="auto-pill"        data-count="-1"  aria-pressed="false">∞</button>
+          </div>
+        </section>
+
+        <section class="ap-section">
+          <h3 class="ap-section-title">STOP CONDITIONS</h3>
+          <label class="ap-check">
+            <input id="auto-stop-feature" type="checkbox" checked aria-label="Stop on feature trigger" />
+            <span>Stop on feature trigger</span>
+          </label>
+          <label class="ap-check">
+            <input id="auto-stop-bigwin" type="checkbox" aria-label="Stop on big win" />
+            <span>Stop on Big Win (≥ 15× bet)</span>
+          </label>
+          <button id="ap-advanced-btn" class="btn-ghost ap-advanced-link" aria-label="Open advanced stop conditions">⚙ Advanced conditions…</button>
+        </section>
+
+        <button id="auto-start" class="btn-primary btn-xl">▶&nbsp;&nbsp;START AUTOPLAY</button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-AUTOPLAY-STOPCONDITIONS  (spec §4 — advanced stop conditions) -->
+  <div id="autoplay-stopcond-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="asc-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="asc-heading">STOP AUTOPLAY WHEN…</span></div>
+      <div class="modal-body asc-body">
+        <label class="ap-check">
+          <input id="asc-stop-balance" type="checkbox" aria-label="Stop when balance falls below amount" />
+          <span>Balance falls below</span>
+        </label>
+        <input id="asc-balance-val" type="number" min="0" step="1" class="st-input-amount asc-sub-input" placeholder="e.g. 50" aria-label="Balance threshold" />
+        <label class="ap-check">
+          <input id="asc-stop-winabove" type="checkbox" aria-label="Stop on single win above amount" />
+          <span>Single win above</span>
+        </label>
+        <input id="asc-winabove-val" type="number" min="0" step="1" class="st-input-amount asc-sub-input" placeholder="e.g. 100" aria-label="Win threshold" />
+      </div>
+      <div class="modal-footer">
+        <button id="asc-save"   class="btn-primary">Save</button>
+        <button id="asc-cancel" class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-LOW-BALANCE  (spec §9.1) -->
+  <div id="restart-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rm-title">
+    <div class="modal-inner rm-inner">
+      <div class="modal-head">
+        <span id="rm-title">OUT OF COINS</span>
+      </div>
+      <div class="rm-body">
+        <div class="rm-icon" aria-hidden="true">🪙</div>
+        <div id="restart-stats" class="rm-stats"></div>
+        <button id="btn-restart-now" class="btn-primary btn-xl">↺&nbsp;&nbsp;Restart Economy</button>
+        <button id="btn-add-funds" class="btn-secondary">Go to Cashier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TST-* Toast notifications  (spec §5) — stacked, FIFO, max 3 -->
+  <div id="sr-announce" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+  <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false" aria-label="Notifications"></div>
+
+  <!-- MOD-REALITY — Reality Check  (spec §4.11) -->
+  <div id="reality-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="rc-heading" aria-live="assertive">
+    <div class="modal-inner rc-inner">
+      <div class="modal-head">
+        <span id="rc-heading">REALITY CHECK</span>
+      </div>
+      <div class="rc-body">
+        <p class="rc-session-msg">You've been playing for <strong id="rc-time-val">60 minutes</strong>.</p>
+        <div class="rc-stats-grid">
+          <span class="rc-stat-lbl">Total Spent</span><span id="rc-spent"   class="rc-stat-val">$0.00</span>
+          <span class="rc-stat-lbl">Total Won</span>   <span id="rc-won"    class="rc-stat-val">$0.00</span>
+          <span class="rc-stat-lbl">Net</span>         <span id="rc-net"    class="rc-stat-val">$0.00</span>
+        </div>
+        <p class="rc-prompt">Take a moment — would you like to continue?</p>
+        <div class="rc-actions">
+          <button id="rc-continue" class="btn-primary">Continue Playing</button>
+          <button id="rc-break"    class="btn-secondary">Take a Break (5 min)</button>
+          <button id="rc-exit"     class="btn-danger">Close Game</button>
+        </div>
+        <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" class="rc-rg-link">🛡 Gambling support — BeGambleAware.org</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCR-INFO — Game Rules &amp; Info  (spec §3.11) -->
+  <div id="info-panel" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inf-heading">
+    <div class="modal-inner inf-inner">
+      <div class="modal-head">
+        <span id="inf-heading">INFO &amp; RULES</span>
+        <button id="inf-close" class="hud-btn" aria-label="Close info">✕</button>
+      </div>
+      <div class="inf-search-bar">
+        <input id="inf-search" type="search" class="inf-search-input" placeholder="Search rules…" aria-label="Search game rules" autocomplete="off" />
+      </div>
+      <div class="inf-body">
+
+        <details class="inf-section" open>
+          <summary class="inf-section-title">HOW TO PLAY</summary>
+          <div class="inf-section-body">
+            <p>Huff &amp; Puff is a 3×5 cascading morph slot with 10 fixed paylines. Match 3 or more identical symbols on a payline from left to right to win. Winning symbols are removed and new ones cascade down — re-triggering wins and advancing the multiplier ladder.</p>
+            <p>Use <strong>BET +/−</strong> to set your stake, then press <strong>SPIN</strong>. Use <strong>AUTO</strong> to run multiple spins unattended. Enable <strong>TURBO</strong> for faster animations.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">SYMBOLS &amp; PAYTABLE</summary>
+          <div class="inf-section-body">
+            <p><strong>High-pay symbols</strong> — Wolf · Pig · Mansion · Buzzsaw · Hat</p>
+            <p><strong>Low-pay royals</strong> — A · K · Q · J · 10 · 9</p>
+            <p><strong>Wild (W01)</strong>: Substitutes for all pay symbols. Own pays: 15× / 40× / 150×</p>
+            <p><strong>Bursting Wild (W02)</strong>: Wild that expands 1–4 adjacent cells into W01 after evaluating a win.</p>
+            <p><strong>Scatter (SC)</strong>: Pays anywhere. 3 = 2× bet + Free Spins. 4 = 10× bet. 5 = 50× bet.</p>
+            <p><strong>Golden Modifier (G01)</strong>: Converts its cell golden; golden cells in a winning line convert to Bursting Wild.</p>
+            <p><strong>Bonus (Wheel)</strong>: 3 on reels 1 / 3 / 5 triggers the Wheel Feature.</p>
+            <p><a href="#" id="inf-goto-paytable" style="color:var(--c-primary)">→ Open full Paytable</a></p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">FREE SPINS FEATURE</summary>
+          <div class="inf-section-body">
+            <p>3+ Scatters anywhere award <strong>10 Free Spins</strong>. During FS the multiplier ladder advances faster: ×2 → ×4 → ×6 → ×10.</p>
+            <p><strong>Retrigger:</strong> 3 scatters during FS add +5 spins, 4 add +8, 5 add +10. Maximum 100 total FS per session.</p>
+            <p>Bet is locked to the triggering bet during Free Spins.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">MULTIPLIER CHAIN</summary>
+          <div class="inf-section-body">
+            <p><strong>Base game:</strong> Each winning cascade step advances the multiplier — ×1 → ×2 → ×3 → ×5.</p>
+            <p><strong>Free Spins:</strong> ×2 → ×4 → ×6 → ×10.</p>
+            <p>The multiplier resets at the start of every new spin and does not persist between base game and Free Spins.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">WHEEL FEATURE</summary>
+          <div class="inf-section-body">
+            <p>Three Bonus symbols on reels 1, 3 and 5 trigger the Wheel Feature. The wheel has 7 segments:</p>
+            <ul class="inf-list">
+              <li>Jackpot Mini (8%) — Mini jackpot prize</li>
+              <li>Jackpot Minor (12%) — Minor jackpot prize</li>
+              <li>Jackpot Major (4%) — Major jackpot prize</li>
+              <li>Jackpot Grand (1%) — Grand jackpot 2000× stake</li>
+              <li>Mansion Bonus (30%) — Pick-me room prize game</li>
+              <li>Buzzsaw Bonus (25%) — Animated saw cuts reveal prizes</li>
+              <li>Mega Hat Bonus (20%) — Hat-covered reels spin for big wins</li>
+            </ul>
+            <p>The Wheel Feature can also be purchased — see BUY FEATURE.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">BUY FEATURE</summary>
+          <div class="inf-section-body">
+            <p><strong>Buy Free Spins</strong>: Costs 75× your current bet. Triggers 10 Free Spins immediately.</p>
+            <p><strong>Buy Wheel</strong>: Costs 50× your current bet. Triggers an instant Wheel spin.</p>
+            <p>Not available during Autoplay or while a feature is active.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">PAYLINES</summary>
+          <div class="inf-section-body">
+            <p>10 fixed paylines, left-to-right only, starting from reel 1. A minimum of 3 matching symbols on a payline is required for a win. Only the highest win per payline is paid.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">RTP &amp; VOLATILITY</summary>
+          <div class="inf-section-body">
+            <p><strong>Return to Player (RTP):</strong> 95.5%</p>
+            <p><strong>Volatility:</strong> Medium-High</p>
+            <p><strong>Hit frequency:</strong> ~26.5%</p>
+            <p><strong>Maximum win:</strong> 10,000× total bet per spin</p>
+            <p>RTP calculated over millions of spins; individual session results will vary significantly.</p>
+          </div>
+        </details>
+
+        <details class="inf-section">
+          <summary class="inf-section-title">RESPONSIBLE GAMBLING</summary>
+          <div class="inf-section-body">
+            <p>Gambling should be entertaining. If you are concerned about your gambling, help is available:</p>
+            <ul class="inf-list">
+              <li><a href="#" rel="noopener">GamCare — gamcare.org.uk</a></li>
+              <li><a href="#" rel="noopener">Gambling Therapy — gamblingtherapy.org</a></li>
+              <li><a href="#" rel="noopener">BeGambleAware — begambleaware.org</a></li>
+            </ul>
+            <p>Set session time and loss limits in <strong>Settings → Limits</strong>.</p>
+          </div>
+        </details>
+
+        <div class="inf-footer">
+          <p>Malfunction voids all pays and plays.</p>
+          <p class="inf-version">v1.0.0 · © 2026 Juego Studioz · 18+ · Play Responsibly</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SCR-HISTORY — Spin History  (spec §3.12) -->
+  <div id="history-panel" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="hs-heading">
+    <div class="modal-inner hs-inner">
+      <div class="modal-head">
+        <span id="hs-heading">HISTORY</span>
+        <button id="hs-close" class="hud-btn" aria-label="Close history">✕</button>
+      </div>
+      <div class="hs-toolbar">
+        <select id="hs-filter" class="hs-select" aria-label="Filter history">
+          <option value="all">All Spins</option>
+          <option value="wins">Wins Only</option>
+          <option value="features">Features</option>
+          <option value="losses">Losses</option>
+        </select>
+        <span id="hs-summary" class="hs-summary"></span>
+        <button id="hs-export" class="btn-ghost hs-export-btn" aria-label="Export spin history as CSV">&#8595; CSV</button>
+      </div>
+      <div id="hs-list" class="hs-list" role="list" aria-live="polite">
+        <div class="hs-empty">No spins yet — start playing! 🎰</div>
+      </div>
+    </div>
+  </div>
+  <!-- Tooltip container  (spec §6 TIP-*) -->
+  <div id="tooltip" class="tooltip hidden" role="tooltip" aria-hidden="true"></div>
+
+  <!-- TIP-HELP-MENU  (spec §6 — ? hotkey: contextual hotkey list overlay) -->
+  <div id="hotkey-help-overlay" class="hotkey-help hidden" role="dialog" aria-modal="true" aria-labelledby="hk-heading">
+    <div class="hk-inner">
+      <div class="hk-header">
+        <span id="hk-heading">KEYBOARD SHORTCUTS</span>
+        <button id="hk-close" class="hk-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <ul class="hk-list">
+        <li><kbd>Space</kbd> / <kbd>Enter</kbd> <span>Spin / Stop autoplay</span></li>
+        <li><kbd>↑</kbd> / <kbd>↓</kbd> <span>Bet + / Bet −</span></li>
+        <li><kbd>T</kbd> <span>Toggle turbo</span></li>
+        <li><kbd>A</kbd> <span>Open autoplay config</span></li>
+        <li><kbd>P</kbd> <span>Open paytable</span></li>
+        <li><kbd>I</kbd> <span>Open game info</span></li>
+        <li><kbd>H</kbd> <span>Open spin history</span></li>
+        <li><kbd>M</kbd> <span>Mute / unmute all audio</span></li>
+        <li><kbd>S</kbd> <span>Toggle spin sound only</span></li>
+        <li><kbd>F</kbd> <span>Toggle fullscreen</span></li>
+        <li><kbd>B</kbd> <span>Open Buy Feature panel</span></li>
+        <li><kbd>1</kbd> <span>Focus bet controls</span></li>
+        <li><kbd>2</kbd> <span>Focus reels</span></li>
+        <li><kbd>3</kbd> <span>Focus spin button</span></li>
+        <li><kbd>?</kbd> <span>Show this help panel</span></li>
+        <li><kbd>Esc</kbd> <span>Close panel / modal</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MOD-SERVER-ERROR  (spec §8 ERR-SERVER-500) -->
+  <div id="server-error-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="se-heading" aria-live="assertive">
+    <div class="modal-inner se-inner">
+      <div class="modal-header">
+        <span id="se-heading">SOMETHING WENT WRONG</span>
+      </div>
+      <div class="modal-body">
+        <p class="se-msg">We hit a snag. Please retry or exit and try again later.</p>
+        <p id="se-code" class="se-code"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="se-retry" class="btn-primary">Retry</button>
+        <button id="se-exit"  class="btn-secondary">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-RECONNECT-FAILED  (spec §4.12 / §8 ERR-NETWORK-003) -->
+  <div id="reconnect-failed-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="rf-heading" aria-live="assertive">
+    <div class="modal-inner rf-inner">
+      <div class="modal-header">
+        <span id="rf-heading">CAN'T RECONNECT</span>
+      </div>
+      <div class="modal-body">
+        <p>We couldn't reconnect. Your progress is saved — try again later.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="rf-retry" class="btn-primary">Retry</button>
+        <button id="rf-exit"  class="btn-secondary">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-BET-HIGH  (spec §4 — confirm-bigbet setting) -->
+  <div id="bet-high-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bh-heading">
+    <div class="modal-inner bh-inner">
+      <div class="modal-header">
+        <span id="bh-heading">HIGH BET</span>
+      </div>
+      <div class="modal-body">
+        <p>Confirm bet of <strong id="bh-amount"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="bh-confirm" class="btn-primary">Confirm</button>
+        <button id="bh-cancel"  class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-CONFIRM-EXIT-FEATURE  (spec §4 — home button during FS/Wheel) -->
+  <div id="exit-feature-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ef-heading">
+    <div class="modal-inner ef-inner">
+      <div class="modal-header">
+        <span id="ef-heading">EXIT FEATURE?</span>
+      </div>
+      <div class="modal-body">
+        <p>If you leave now, you'll lose any remaining free spins or picks. Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="ef-exit"  class="btn-danger">Leave Anyway</button>
+        <button id="ef-stay"  class="btn-primary">Stay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-MAINTENANCE  (spec §8 ERR-SERVER-503) -->
+  <div id="maintenance-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="mt-heading" aria-live="assertive">
+    <div class="modal-inner mt-inner">
+      <div class="modal-header">
+        <span id="mt-heading">MAINTENANCE</span>
+      </div>
+      <div class="modal-body">
+        <p>We're upgrading the game. Please check back soon.</p>
+        <p id="mt-eta" class="mt-eta"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="mt-close" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-RG-LIMIT-HIT  (spec §8 ERR-RG-001 — locked, no Esc) -->
+  <div id="rg-limit-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="rl-heading" aria-live="assertive">
+    <div class="modal-inner rl-inner">
+      <div class="modal-header">
+        <span id="rl-heading">SESSION LIMIT REACHED</span>
+      </div>
+      <div class="modal-body">
+        <p id="rl-msg">You've reached your session limit.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="rl-exit" class="btn-danger">End Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCR-SESSION-EXPIRED  (spec §3.16 ERR-AUTH-001) -->
+  <div id="session-expired-overlay" class="ov-session-expired hidden" role="alertdialog" aria-modal="true" aria-live="assertive" aria-labelledby="sx-heading">
+    <div class="ov-session-expired-card">
+      <h2 id="sx-heading" class="ov-session-expired-title">SESSION EXPIRED</h2>
+      <p class="ov-session-expired-msg">Your session has timed out. Please sign in again to resume.</p>
+      <div class="modal-footer">
+        <button id="sx-resume" class="btn-primary">Resume</button>
+        <button id="sx-exit"   class="btn-secondary">Exit to Lobby</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-RG-BREAK-ACTIVE  (spec §4 — break in progress, locked) -->
+  <div id="rg-break-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="rb-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="rb-heading">BREAK IN PROGRESS</span></div>
+      <div class="modal-body">
+        <p>You’re on a break. <strong id="rb-time-remaining">5:00</strong> remaining.</p>
+        <p class="modal-subtext">Gameplay is paused until your break ends.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="rb-exit" class="btn-danger">Exit Game</button>
+        <button id="rb-wait" class="btn-ghost">Wait</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-CONFIG-ERROR  (spec §8 ERR-CONFIG-001 — locked) -->
+  <div id="config-error-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="ce-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="ce-heading">COULDN’T LOAD GAME</span></div>
+      <div class="modal-body"><p>Unable to load game configuration. Please refresh to try again.</p></div>
+      <div class="modal-footer">
+        <button id="ce-refresh" class="btn-primary" onclick="location.reload()">Refresh</button>
+        <button id="ce-exit"    class="btn-danger">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-CONFIRM-EXIT-GAME  (spec §4 — home during autoplay) -->
+  <div id="confirm-exit-game-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ceg-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="ceg-heading">EXIT GAME?</span></div>
+      <div class="modal-body"><p>Autoplay is running. Stop and exit?</p></div>
+      <div class="modal-footer">
+        <button id="ceg-stop-exit" class="btn-danger">Stop &amp; Exit</button>
+        <button id="ceg-continue" class="btn-ghost">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-TUTORIAL-SKIP-CONFIRM  (spec §8) -->
+  <div id="tutorial-skip-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ts-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="ts-heading">SKIP TUTORIAL?</span></div>
+      <div class="modal-body"><p>You can re-enable the tutorial in Settings.</p></div>
+      <div class="modal-footer">
+        <button id="ts-skip-confirm" class="btn-danger">Skip</button>
+        <button id="ts-continue" class="btn-secondary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-CONCURRENT-SESSION  (spec §8) -->
+  <div id="concurrent-session-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="cs-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="cs-heading">ANOTHER SESSION DETECTED</span></div>
+      <div class="modal-body"><p>You're logged in on another device or tab. Only one active session is allowed.</p></div>
+      <div class="modal-footer">
+        <button id="cs-switch" class="btn-primary">Play Here</button>
+        <button id="cs-exit" class="btn-secondary">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-CASHIER-REDIRECT  (spec §8) -->
+  <div id="cashier-redirect-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cr-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="cr-heading">GO TO CASHIER?</span></div>
+      <div class="modal-body"><p>You'll be taken to the cashier. Return here when ready.</p></div>
+      <div class="modal-footer">
+        <button id="cr-go" class="btn-primary">Go</button>
+        <button id="cr-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-DEVTOOLS-DETECTED  (spec §8) -->
+  <div id="devtools-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="dt-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="dt-heading">NOT SUPPORTED</span></div>
+      <div class="modal-body"><p>For security, this game can't run with developer tools open.</p></div>
+      <div class="modal-footer">
+        <button id="dt-exit" class="btn-danger">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-SETTINGS-UNSAVED  (spec §8) -->
+  <div id="settings-unsaved-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="su-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="su-heading">UNSAVED CHANGES</span></div>
+      <div class="modal-body"><p>You have unsaved changes. Save now?</p></div>
+      <div class="modal-footer">
+        <button id="su-save" class="btn-primary">Save</button>
+        <button id="su-discard" class="btn-danger">Discard</button>
+        <button id="su-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-MAX-WIN-REACHED  (spec §8) -->
+  <div id="max-win-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="mw-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="mw-heading">MAX WIN REACHED! 🏆</span></div>
+      <div class="modal-body">
+        <p>Congratulations! You've hit the maximum win of <strong>10,000×</strong> your bet.</p>
+        <div id="max-win-amount" class="max-win-amount">0</div>
+      </div>
+      <div class="modal-footer">
+        <button id="mw-collect" class="btn-primary">Collect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-NETWORK-QUALITY  (spec §8 — RTT > 500ms) -->
+  <div id="network-quality-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="nq-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="nq-heading">SLOW CONNECTION</span></div>
+      <div class="modal-body"><p>Your connection seems slow. Gameplay may be affected.</p></div>
+      <div class="modal-footer">
+        <button id="nq-continue" class="btn-primary">Continue</button>
+        <button id="nq-exit" class="btn-secondary">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-HIDDEN-DEVIATION  (spec §8 — server-issued fraud flag) -->
+  <div id="hidden-deviation-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="hd-heading" aria-live="assertive">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="hd-heading">UNUSUAL ACTIVITY</span></div>
+      <div class="modal-body"><p>Your session has been paused for verification. Please contact support.</p></div>
+      <div class="modal-footer">
+        <button id="hd-support" class="btn-primary">Contact Support</button>
+        <button id="hd-exit" class="btn-danger">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOD-LANG-CHANGE  (spec §4 — language change confirmation) -->
+  <div id="lang-change-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lc-heading">
+    <div class="modal-inner">
+      <div class="modal-header"><span id="lc-heading">CHANGE LANGUAGE?</span></div>
+      <div class="modal-body"><p>The game will reload to apply the new language. Your progress will be saved.</p></div>
+      <div class="modal-footer">
+        <button id="lc-reload" class="btn-primary">Reload</button>
+        <button id="lc-cancel" class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- OVL-ROTATE-HINT (spec §6.4 — mobile portrait first-load hint) -->
+<div id="rotate-hint" class="rotate-hint hidden" role="dialog" aria-modal="true" aria-label="Rotate device suggestion">
+  <div class="rotate-hint-inner">
+    <span class="rotate-icon" aria-hidden="true">&#x21BB;</span>
+    <p>Rotate your device for the best experience</p>
+    <button id="rotate-hint-dismiss" class="btn-ghost">OK, stay portrait</button>
+  </div>
+</div>
+
+<!-- MOD-AGE-GATE — outside #app so it shows over the splash screen -->
+<div id="age-gate-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="ag-heading" aria-describedby="ag-desc">
+  <div class="modal-inner">
+    <div class="modal-header"><span id="ag-heading">VERIFY YOUR AGE</span></div>
+    <div class="modal-body">
+      <p id="ag-desc">You must be 18 or over to play this game. Please enter your date of birth to continue.</p>
+      <fieldset class="ag-dob-fieldset">
+        <legend class="st-lbl">Date of Birth</legend>
+        <div class="ag-dob-selects">
+          <div class="ag-select-wrap">
+            <select id="ag-dob-day" class="ag-select" aria-label="Day" autocomplete="bday-day">
+              <option value="">Day</option>
+            </select>
+          </div>
+          <div class="ag-select-wrap">
+            <select id="ag-dob-month" class="ag-select" aria-label="Month" autocomplete="bday-month">
+              <option value="">Month</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div class="ag-select-wrap">
+            <select id="ag-dob-year" class="ag-select" aria-label="Year" autocomplete="bday-year">
+              <option value="">Year</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+      <p id="ag-error" class="bf-unaffordable hidden" aria-live="polite" role="alert"></p>
+    </div>
+    <div class="modal-footer">
+      <button id="ag-confirm" class="btn-primary">Confirm Age</button>
+      <button id="ag-exit"    class="btn-danger">Exit</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
