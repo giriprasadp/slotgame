@@ -31,7 +31,8 @@ COPY --from=builder /app/dist ./dist
 # Prebuilt migration SQL files (needed by drizzle-kit migrate at startup)
 COPY --from=builder /app/src/db/migrations ./dist/db/migrations
 
-# Keys directory is mounted as a volume — just ensure it exists with correct owner
+# Keys directory only needed when using file-based JWT keys (local Docker with volume mount).
+# On Railway, set JWT_PRIVATE_KEY_B64 + JWT_PUBLIC_KEY_B64 as base64-encoded PEM env vars.
 RUN mkdir -p keys && chown -R appuser:appgroup /app
 
 USER appuser
