@@ -5,7 +5,7 @@ export class ApiClient {
   private token: string | null = null;
   private ready = false;
 
-  constructor(base = 'http://localhost:3000/api/v1') {
+  constructor(base: string) {
     this.base = base;
   }
 
