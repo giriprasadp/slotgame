@@ -47,8 +47,16 @@ coverage/
 # ── Docker / CI temp ─────────────────────────────────────────────────────────
 .docker/
 
-# ── Temp demo — not for production ───────────────────────────────────────────
+# ── Temp demo project ────────────────────────────────────────────────────────
 temp demo client/
+
+# ── Design documents (keep locally, not in repo) ──────────────────────────────
+*.xlsx
+*.xls
+*-gdd*.md
+*-ux-spec*.md
+*-wireframe*.md
+HuffAndPuff_*
 
 # ── OS artifacts ─────────────────────────────────────────────────────────────
 .DS_Store
