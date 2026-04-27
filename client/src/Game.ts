@@ -362,6 +362,46 @@ export class Game {
       }
     }
 
+    // ── BUY FEATURE FAST-PATH (GDD §13.1) ──────────────────────────
+    // Buy spins go straight to the feature — no reel spin, no chain replay.
+    // The /spin/buy response has grid:[], chain:[] so attempting reel animation
+    // would crash accessing response.grid[r][i].sym.
+    if (spinType === 'buy_fs' || spinType === 'buy_wheel') {
+      this.machine = 'SPINNING';
+      this.setControlsEnabled(false, false);
+      this.setLastWinEl(0);
+      let buyResponse: SpinResponse;
+      try {
+        buyResponse = await this.api.buySpin(spinType === 'buy_fs' ? 'FS' : 'WHEEL', this.betLevelIdx);
+      } catch (err) {
+        this.machine = 'IDLE';
+        this.setControlsEnabled(true);
+        this.setSpinLabel('SPIN');
+        const status = (err as { status?: number }).status;
+        if (status === 503) this.showMaintenanceModal();
+        else if (status === 429) this.toastRateLimit();
+        else if (status === 401 || status === 403) this.el('session-expired-overlay')?.classList.remove('hidden');
+        else this.showServerErrorModal(status ? `HTTP ${status}` : '');
+        return;
+      }
+      this.balance = buyResponse.balanceAfter;
+      this.setBalanceEl(this.balance);
+      this.spinCount++;
+      // FS buy sets up a free-spins session
+      if (buyResponse.freeSpinsState) {
+        this.fsRemaining    = buyResponse.freeSpinsState.remaining;
+        this.fsRunningTotal = buyResponse.freeSpinsState.runningTotal;
+      }
+      this.machine = 'IDLE';
+      await this.processFeatures(buyResponse, 'buy');
+      this.lastWin = buyResponse.totalWin;
+      this.updateHUD();
+      this.setControlsEnabled(true);
+      this.setSpinLabel('SPIN');
+      return;
+    }
+    // ── END BUY FAST-PATH ────────────────────────────────────────────
+
     this.machine = 'SPINNING';
     this.vibrate(20);
     // DS AE03 — spin
@@ -394,10 +434,12 @@ export class Game {
     });
 
     // Concurrent: API + wait for all reels to reach max-speed (or quick-stop)
+    const apiCall = this.api.spin(this.betLevelIdx, spinType);
+
     let response: SpinResponse;
     try {
       [response] = await Promise.all([
-        this.api.spin(this.betLevelIdx, spinType),
+        apiCall,
         spinWait,
       ]) as [SpinResponse, void];
     } catch (err) {
@@ -733,7 +775,7 @@ export class Game {
   /* ══════════════════════════════════════════════════════
      FEATURE HANDLING
   ══════════════════════════════════════════════════════ */
-  private async processFeatures(response: SpinResponse): Promise<void> {
+  private async processFeatures(response: SpinResponse, triggerSource: 'natural' | 'scatter' | 'buy' = 'natural'): Promise<void> {
     for (const feat of response.features) {
       if (this.autoplayActive && this.autoplayStopOnFeature) this.stopAutoplay('feature triggered');
 
@@ -741,11 +783,12 @@ export class Game {
         // Guard against server bug: FS_TRIGGER should never appear during an active FS session
         if (this.isFsMode) continue;
         const spinsAwarded = response.freeSpinsState?.remaining ?? 10;
+        const fsSrc = triggerSource === 'buy' ? 'buy' : 'scatter';
         this.toastFsTriggered(spinsAwarded);
         this.machine = 'FEATURE';
         this.vibrate([80, 50, 120]);
         // DS AE05 — feature_trigger
-        this.track('feature_trigger', { featureType: 'FS', triggerSource: 'scatter', scatterCount: feat.scatterCount, buyCost: 0 });
+        this.track('feature_trigger', { featureType: 'FS', triggerSource: fsSrc, scatterCount: feat.scatterCount, buyCost: triggerSource === 'buy' ? BET_LEVELS[this.betLevelIdx].total * BUY_FS_MULT : 0 });
         await this.showFsIntroOverlay(spinsAwarded);
         this.isFsMode       = true;
         this.fsRemaining    = response.freeSpinsState?.remaining ?? 10;
@@ -769,7 +812,7 @@ export class Game {
         this.toastWheelTriggered();
         this.vibrate([80, 50, 120]);
         // DS AE05 — feature_trigger
-        this.track('feature_trigger', { featureType: 'WHEEL', triggerSource: 'natural', scatterCount: 0, buyCost: 0 });
+        this.track('feature_trigger', { featureType: 'WHEEL', triggerSource, scatterCount: 0, buyCost: triggerSource === 'buy' ? BET_LEVELS[this.betLevelIdx].total * BUY_WHEEL_MULT : 0 });
         await this.showWheelIntroOverlay();
         await this.showWheelFeature(feat.wheelResult);
         this.machine = 'IDLE';
@@ -830,7 +873,8 @@ export class Game {
   }
 
   /* ══════════════════════════════════════════════════════
-     WHEEL FEATURE (visual only — result from server)
+     WHEEL FEATURE  (GDD §12.3 + §12.8 state flow)
+     WF_INTRO → WF_SPIN → WF_REVEAL → WF_BONUS_DISPATCH → WF_PAYOUT → WF_EXIT
   ══════════════════════════════════════════════════════ */
   private async showWheelFeature(result: import('./types/api').WheelResult): Promise<void> {
     const overlay  = this.el('wheel-overlay');
@@ -839,30 +883,32 @@ export class Game {
     overlay.classList.remove('hidden');
     if (resultEl) resultEl.textContent = '';
 
-    // Simple wheel spin VFX on #wheel-canvas (4 seconds)
-    const wCanvas = document.getElementById('wheel-canvas') as HTMLCanvasElement | null;
-    if (wCanvas) this.animateWheelCanvas(wCanvas, result);
-    this.audio.play('wheelSpin'); // SFX22
+    this.audio.play('wheelSpin');
     this.audio.playMusic('wheel');
 
-    // Wait for animation to complete, then show winner label
-    await sleep(4100);
+    // GDD §12.3: animate with phases — returns a Promise that resolves when landing is done
+    const wCanvas = document.getElementById('wheel-canvas') as HTMLCanvasElement | null;
+    const totalDur = wCanvas ? await this.animateWheelCanvas(wCanvas, result) : 5500;
 
     this.audio.stopMusic();
 
     const bonusName = WHEEL_BONUS_NAMES[result.bonusType] ?? result.bonusType;
     if (resultEl) resultEl.textContent = '🎉 ' + bonusName + '!';
     this.audio.play('wheelLand');
-    await sleep(1400);
+    await sleep(1200);
 
     overlay.classList.add('hidden');
     await this.showBonusResult(result);
     this.audio.playMusic('base');
+    void totalDur; // suppress unused warning
   }
 
-  private animateWheelCanvas(wCanvas: HTMLCanvasElement, result: import('./types/api').WheelResult): void {
+  /** GDD §12.3 — 4 phases: buildup(500ms) + accel(800ms) + full(1500ms) + decel+bounce(2200ms)
+   *  Returns total duration so caller can await. */
+  private animateWheelCanvas(wCanvas: HTMLCanvasElement, result: import('./types/api').WheelResult): Promise<number> {
     const ctx = wCanvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) return Promise.resolve(0);
+
     const W   = wCanvas.width;
     const H   = wCanvas.height;
     const cx  = W / 2;
@@ -871,26 +917,38 @@ export class Game {
     const seg = Math.PI * 2 / n;
     const outerR = Math.min(cx, cy) - 20;
     const innerR = outerR * 0.32;
-    const dur = 4000;
 
-    // Rotation that lands result.segment.idx under the top pointer.
-    // Segment i is centered at angle: rot + i*seg - Math.PI/2  (before centering offset).
-    // We want segment idx centered at top (angle -PI/2), so:
-    // rot = -idx * seg + extra full rotations
-    const finalRot = Math.PI * 2 * 5 - result.segment.idx * seg;
-    const start = performance.now();
+    // Phase durations (ms) — GDD §12.3
+    const T_BUILDUP  =  500;  // pre-spin wobble / buildup
+    const T_ACCEL    =  800;  // acceleration
+    const T_FULL     = 1500;  // full speed
+    const T_DECEL    = 1800;  // deceleration into landing
+    const T_BOUNCE   =  400;  // landing bounce
+    const TOTAL      = T_BUILDUP + T_ACCEL + T_FULL + T_DECEL + T_BOUNCE;
+
+    // Target rotation: land result.segment.idx under top pointer
+    // During full-speed, wheel does 5 full rotations; decel brings it to final angle.
+    const fullSpeedRot = Math.PI * 2 * 5;
+    const targetAngle  = Math.PI * 2 * 2 - result.segment.idx * seg;  // 2 more rotations in decel
+    const finalRot     = fullSpeedRot + targetAngle;
+    const maxSpeed     = fullSpeedRot / (T_ACCEL + T_FULL) * 1000;  // radians/sec at peak
+
     let lastTickSeg = -1;
+    const start = performance.now();
+
+    // Easing helpers
+    const easeIn  = (t: number) => t * t;
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
     const drawFrame = (rot: number) => {
       ctx.clearRect(0, 0, W, H);
       ctx.save();
       ctx.translate(cx, cy);
 
-      // Segments
       for (let i = 0; i < n; i++) {
-        const a0 = rot + i * seg - Math.PI / 2 - seg / 2;
-        const a1 = a0 + seg;
-        const type = WHEEL_SEGMENTS[i];
+        const a0    = rot + i * seg - Math.PI / 2 - seg / 2;
+        const a1    = a0 + seg;
+        const type  = WHEEL_SEGMENTS[i];
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, outerR, a0, a1);
@@ -898,22 +956,20 @@ export class Game {
         ctx.fillStyle = WHEEL_BONUS_COLORS[type];
         ctx.fill();
         ctx.strokeStyle = '#1C1414';
-        ctx.lineWidth = 3;
+        ctx.lineWidth   = 3;
         ctx.stroke();
 
-        // Segment label — positioned at mid-radius, rotated outward
         const labelA = a0 + seg / 2;
         ctx.save();
         ctx.rotate(labelA);
         ctx.translate((outerR + innerR) / 2, 0);
         ctx.rotate(Math.PI / 2);
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${Math.round(outerR * 0.085)}px Inter,sans-serif`;
-        ctx.textAlign = 'center';
+        ctx.fillStyle    = '#fff';
+        ctx.font         = `bold ${Math.round(outerR * 0.085)}px Inter,sans-serif`;
+        ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.7)';
-        ctx.shadowBlur  = 4;
-        // First word of bonus name (e.g. "Jackpot", "Mansion", "Buzzsaw", "Mega")
+        ctx.shadowColor  = 'rgba(0,0,0,0.7)';
+        ctx.shadowBlur   = 4;
         ctx.fillText(WHEEL_BONUS_NAMES[type].split(' ')[0], 0, 0);
         ctx.restore();
       }
@@ -927,15 +983,15 @@ export class Game {
       ctx.fillStyle = grad;
       ctx.fill();
       ctx.strokeStyle = '#1C1414';
-      ctx.lineWidth = 4;
+      ctx.lineWidth   = 4;
       ctx.stroke();
       ctx.restore();
 
-      // Pointer arrow at top (fixed, outside wheel)
+      // Fixed pointer arrow at top
       ctx.save();
-      ctx.fillStyle = '#D64545';
+      ctx.fillStyle   = '#D64545';
       ctx.strokeStyle = '#1C1414';
-      ctx.lineWidth = 3;
+      ctx.lineWidth   = 3;
       ctx.beginPath();
       ctx.moveTo(cx,      cy - outerR - 12);
       ctx.lineTo(cx - 16, cy - outerR + 12);
@@ -946,22 +1002,53 @@ export class Game {
       ctx.restore();
     };
 
-    const tick = (t: number) => {
-      const p    = Math.min(1, (t - start) / dur);
-      const ease = 1 - Math.pow(1 - p, 3);
-      const rot  = finalRot * ease;
-      drawFrame(rot);
+    return new Promise(resolve => {
+      const tick = (now: number) => {
+        const elapsed = now - start;
+        let rot: number;
 
-      // Tick sound each time pointer crosses a new segment boundary
-      const pointerSeg = Math.floor(((rot + Math.PI / 2 + Math.PI * 2 * 10) % (Math.PI * 2)) / seg) % n;
-      if (pointerSeg !== lastTickSeg) {
-        this.audio.play('wheelTick');
-        lastTickSeg = pointerSeg;
-      }
+        if (elapsed < T_BUILDUP) {
+          // Phase 1: buildup wobble — very slow oscillation
+          const p = elapsed / T_BUILDUP;
+          rot = Math.sin(p * Math.PI * 4) * 0.08;
+        } else if (elapsed < T_BUILDUP + T_ACCEL) {
+          // Phase 2: accelerate
+          const p = (elapsed - T_BUILDUP) / T_ACCEL;
+          rot = fullSpeedRot * easeIn(p) * (T_ACCEL / (T_ACCEL + T_FULL));
+        } else if (elapsed < T_BUILDUP + T_ACCEL + T_FULL) {
+          // Phase 3: full speed (constant)
+          const accelEnd = fullSpeedRot * (T_ACCEL / (T_ACCEL + T_FULL));
+          const p = (elapsed - T_BUILDUP - T_ACCEL) / T_FULL;
+          rot = accelEnd + (fullSpeedRot - accelEnd) * p;
+        } else if (elapsed < T_BUILDUP + T_ACCEL + T_FULL + T_DECEL) {
+          // Phase 4: decelerate to final angle
+          const p   = (elapsed - T_BUILDUP - T_ACCEL - T_FULL) / T_DECEL;
+          rot = fullSpeedRot + targetAngle * easeOut(p);
+        } else {
+          // Phase 5: landing bounce
+          const p      = (elapsed - T_BUILDUP - T_ACCEL - T_FULL - T_DECEL) / T_BOUNCE;
+          const bounce = Math.sin(p * Math.PI * 3) * 0.05 * (1 - p);  // decaying oscillation
+          rot = finalRot + bounce;
+        }
 
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+        drawFrame(rot);
+
+        // Tick sound each time pointer crosses a new segment
+        const pointerSeg = Math.floor(((rot + Math.PI / 2 + Math.PI * 2 * 20) % (Math.PI * 2)) / seg) % n;
+        if (pointerSeg !== lastTickSeg) {
+          this.audio.play('wheelTick');
+          lastTickSeg = pointerSeg;
+        }
+
+        if (elapsed < TOTAL) {
+          requestAnimationFrame(tick);
+        } else {
+          drawFrame(finalRot); // lock on final position
+          resolve(TOTAL);
+        }
+      };
+      requestAnimationFrame(tick);
+    });
   }
 
   private async showBonusResult(result: import('./types/api').WheelResult): Promise<void> {
@@ -1125,159 +1212,232 @@ export class Game {
     rafId = requestAnimationFrame(tick);
   }
 
-  /* ── SCR-MANSION (spec §3.6) ─────────────────────────────── */
+  /* ── SCR-MANSION (GDD §12.5) ─────────────────────────────── */
+  // Payout table: 1=1×, 3=3×, 6=10×, 10=50×, 15=500× (interpolated linearly between)
   private async showMansionBonus(r: MansionResult, overlay: HTMLElement, inner: HTMLElement): Promise<void> {
+    // GDD §12.5 payout milestones for the progress bar
+    const MANSION_MILESTONES = [
+      { count: 1, mult: 1 }, { count: 3, mult: 3 }, { count: 6, mult: 10 },
+      { count: 10, mult: 50 }, { count: 15, mult: 500 },
+    ];
+    const totalRounds = r.events.length;
+
     inner.innerHTML = `
       <div class="bonus-title">MANSION BONUS</div>
-      <div class="bonus-desc">Hats land on cells — each becomes a mansion!</div>
+      <div class="bonus-desc">Each hat becomes a mansion — more mansions, bigger payout!</div>
+      <div class="mansion-milestones">
+        ${MANSION_MILESTONES.map(m => `<div class="mansion-ms" data-count="${m.count}"><span class="mansion-ms-val">${m.count}</span><span class="mansion-ms-mult">${m.mult}×</span></div>`).join('')}
+      </div>
       <div class="mansion-grid" id="mansion-grid" role="grid" aria-label="Mansion bonus grid"></div>
-      <div id="bonus-status" class="bonus-status" aria-live="polite">—</div>
+      <div id="bonus-status" class="bonus-status" aria-live="polite">Round 1 / ${totalRounds}</div>
       <div id="bonus-total" class="bonus-total" aria-live="assertive">&nbsp;</div>
       <p class="bonus-tap-hint">Tap anywhere to continue</p>`;
     overlay.classList.remove('hidden');
+    this.audio.play('dialogOpen');
 
-    const grid = inner.querySelector<HTMLElement>('#mansion-grid')!;
+    const gridEl  = inner.querySelector<HTMLElement>('#mansion-grid')!;
+    const statEl  = inner.querySelector<HTMLElement>('#bonus-status')!;
+    const totEl   = inner.querySelector<HTMLElement>('#bonus-total')!;
     const cells: HTMLElement[] = [];
     for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
       const el = document.createElement('div');
       el.className = 'mansion-cell';
       el.setAttribute('role', 'gridcell');
-      el.setAttribute('aria-label', `Row ${row + 1} col ${col + 1}`);
-      grid.appendChild(el);
+      el.setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: empty`);
+      gridEl.appendChild(el);
       cells.push(el);
     }
     await sleep(400);
 
     let mansionCount = 0;
-    const statEl = inner.querySelector<HTMLElement>('#bonus-status')!;
-    const totEl  = inner.querySelector<HTMLElement>('#bonus-total')!;
+
+    const highlightMilestone = (count: number) => {
+      inner.querySelectorAll<HTMLElement>('.mansion-ms').forEach(el => {
+        const ms = parseInt(el.dataset.count ?? '0');
+        el.classList.toggle('mansion-ms-reached', count >= ms);
+        el.classList.toggle('mansion-ms-active',  count === ms);
+      });
+    };
 
     for (const ev of r.events) {
-      statEl.textContent = `Round ${(ev.round ?? 0) + 1}`;
-      if (ev.type === 'miss') { await sleep(150); continue; }
-      if (ev.row !== undefined && ev.reel !== undefined) {
-        const idx = ev.row * 5 + ev.reel;
+      statEl.textContent = `Round ${(ev.round ?? 0) + 1} / ${totalRounds}`;
+      if (ev.type === 'miss') { await sleep(180); continue; }
+
+      const targetRow  = (ev.type === 'relocate' ? ev.row  : ev.row)  as number | undefined;
+      const targetReel = (ev.type === 'relocate' ? ev.reel : ev.reel) as number | undefined;
+      if (targetRow !== undefined && targetReel !== undefined) {
+        const idx = targetRow * 5 + targetReel;
         cells[idx].textContent = '🎩';
+        cells[idx].classList.remove('mansion');
         cells[idx].classList.add('hat');
-        cells[idx].setAttribute('aria-label', `Row ${ev.row + 1} col ${ev.reel + 1}: hat`);
+        cells[idx].setAttribute('aria-label', `Row ${targetRow + 1} col ${targetReel + 1}: hat dropping`);
         this.audio.play('smallWin');
-        await sleep(280);
+        await sleep(320);
         cells[idx].classList.remove('hat');
         cells[idx].classList.add('mansion');
         cells[idx].textContent = '🏰';
         mansionCount++;
-        cells[idx].setAttribute('aria-label', `Row ${ev.row + 1} col ${ev.reel + 1}: mansion`);
+        cells[idx].setAttribute('aria-label', `Row ${targetRow + 1} col ${targetReel + 1}: mansion`);
+        highlightMilestone(mansionCount);
+        await sleep(100);
       }
-      if (ev.type === 'fullbonus') { this.audio.play('niceWin'); await sleep(220); }
+      if (ev.type === 'fullbonus') {
+        this.audio.play('niceWin');
+        totEl.textContent = `Full screen bonus! +${fmt(10 * BET_LEVELS[this.betLevelIdx].total)}`;
+        await sleep(280);
+      }
     }
 
-    animateValue(0, r.payout, 1000, v => { totEl.textContent = `${mansionCount} mansions — WIN: ${fmt(v)} coins`; });
-    statEl.textContent = 'Collect!';
-    statEl.setAttribute('aria-live', 'assertive');
-    if (r.payout > 0) this.audio.play(r.payout > BET_LEVELS[this.betLevelIdx].total * 20 ? 'bigWin' : 'niceWin');
-    await sleep(1200);
+    statEl.textContent = `${mansionCount} mansion${mansionCount !== 1 ? 's' : ''} built!`;
+    const winAudio = r.payout >= BET_LEVELS[this.betLevelIdx].total * 50 ? 'bigWin'
+                   : r.payout > 0 ? 'niceWin' : 'smallWin';
+    this.audio.play(winAudio);
+    animateValue(0, r.payout, 1200, v => { totEl.textContent = `${mansionCount} mansions — WIN: ${fmt(v)} coins`; });
+    await sleep(1400);
 
     await new Promise<void>(res => {
       overlay.addEventListener('click', () => res(), { once: true });
-      setTimeout(res, 5000);
+      setTimeout(res, 6000);
     });
     overlay.classList.add('hidden');
+    this.audio.play('dialogClose');
   }
 
-  /* ── SCR-BUZZSAW (spec §3.7) ─────────────────────────────── */
+  /* ── SCR-BUZZSAW (GDD §12.6) ─────────────────────────────── */
+  // Buzzsaws move L→R across row: straw(1×)→wood(3×)→brick(8×)→mansion(25×)
   private async showBuzzsawBonus(r: BuzzsawResult, overlay: HTMLElement, inner: HTMLElement): Promise<void> {
     inner.innerHTML = `
       <div class="bonus-title">BUZZSAW BONUS</div>
-      <div class="bonus-desc">Buzzsaws upgrade cells row by row!</div>
+      <div class="bonus-desc">Buzzsaws sweep across each row — straw → wood → brick → mansion!</div>
       <div class="bonus-sub-row">
-        <span class="bonus-stat-lbl">CUTS</span>
-        <span id="bz-cuts" class="bonus-stat-val">0</span>
-        <span class="bonus-stat-sep">·</span>
-        <span class="bonus-stat-lbl">MULT</span>
-        <span id="bz-mult" class="bonus-stat-val">×1</span>
+        <span class="bonus-stat-lbl">SAWS</span>
+        <span id="bz-saws" class="bonus-stat-val">0 / ${r.rowBuzzsaws.reduce((a, b) => a + b, 0)}</span>
       </div>
       <div class="buzzsaw-grid" id="buzz-grid" role="grid" aria-label="Buzzsaw bonus grid"></div>
+      <div class="bz-legend">
+        <span class="bz-leg straw">Straw 1×</span>
+        <span class="bz-leg wood">Wood 3×</span>
+        <span class="bz-leg brick">Brick 8×</span>
+        <span class="bz-leg mansion">Mansion 25×</span>
+      </div>
       <div id="bonus-total" class="bonus-total" aria-live="assertive">&nbsp;</div>
       <p class="bonus-tap-hint">Tap anywhere to continue</p>`;
     overlay.classList.remove('hidden');
+    this.audio.play('dialogOpen');
 
     const gridEl = inner.querySelector<HTMLElement>('#buzz-grid')!;
+    const sawsEl = inner.querySelector<HTMLElement>('#bz-saws')!;
+    const totEl  = inner.querySelector<HTMLElement>('#bonus-total')!;
     const cells: HTMLElement[] = [];
+    const totalSaws = r.rowBuzzsaws.reduce((a, b) => a + b, 0);
+
     for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
       const el = document.createElement('div');
       el.className = 'buzz-cell';
       el.setAttribute('role', 'gridcell');
+      el.setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: empty`);
       gridEl.appendChild(el);
       cells.push(el);
     }
     await sleep(400);
 
-    const cutsEl  = inner.querySelector<HTMLElement>('#bz-cuts')!;
-    const multEl  = inner.querySelector<HTMLElement>('#bz-mult')!;
-    const totEl   = inner.querySelector<HTMLElement>('#bonus-total')!;
-    const multSeq = [1, 2, 3, 5];
-    let totCuts   = 0;
+    let sawsDone = 0;
 
     for (let row = 0; row < 3; row++) {
       const count = r.rowBuzzsaws[row] ?? 0;
+      if (count === 0) continue;
+
       for (let k = 0; k < count; k++) {
-        totCuts++;
-        const multIdx = Math.min(totCuts - 1, multSeq.length - 1);
-        cutsEl.textContent  = String(totCuts);
-        multEl.textContent  = `×${multSeq[multIdx]}`;
+        sawsDone++;
+        sawsEl.textContent = `${sawsDone} / ${totalSaws}`;
+
+        // Animate the saw sweeping L→R across this row (GDD §12.6)
         for (let col = 0; col < 5; col++) {
           const idx = row * 5 + col;
+          // Show saw passing through cell
+          cells[idx].classList.add('saw-active');
+          await sleep(70);
+
           const curLvl = BUZZSAW_ORDER.findIndex(cls => cells[idx].classList.contains(cls));
           const nextLvl = Math.min(BUZZSAW_ORDER.length - 1, (curLvl === -1 ? 0 : curLvl) + 1);
           const nextCls = BUZZSAW_ORDER[nextLvl];
           BUZZSAW_ORDER.forEach(cls => cells[idx].classList.remove(cls));
+          cells[idx].classList.remove('saw-active');
           if (nextCls !== 'none') cells[idx].classList.add(nextCls);
           const mult = BUZZSAW_BORDERS[nextCls] ?? 0;
           cells[idx].textContent = mult > 0 ? `${mult}×` : '';
-          cells[idx].setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: ${nextCls}`);
+          cells[idx].setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: ${nextCls} (${mult}×)`);
           this.audio.play('uiTick');
-          await sleep(80);
+          await sleep(60);
         }
-        await sleep(120);
+        await sleep(200);
       }
     }
 
-    animateValue(0, r.payout, 900, v => { totEl.textContent = `${r.total}× total — WIN: ${fmt(v)} coins`; });
-    if (r.payout > 0) this.audio.play(r.payout > BET_LEVELS[this.betLevelIdx].total * 20 ? 'bigWin' : 'niceWin');
-    await sleep(1200);
+    // Final tally
+    const winAudio = r.payout >= BET_LEVELS[this.betLevelIdx].total * 50 ? 'bigWin'
+                   : r.payout > 0 ? 'niceWin' : 'smallWin';
+    this.audio.play(winAudio);
+    animateValue(0, r.payout, 1000, v => { totEl.textContent = `${r.total}× total — WIN: ${fmt(v)} coins`; });
+    await sleep(1400);
 
     await new Promise<void>(res => {
       overlay.addEventListener('click', () => res(), { once: true });
-      setTimeout(res, 5000);
+      setTimeout(res, 6000);
     });
     overlay.classList.add('hidden');
+    this.audio.play('dialogClose');
   }
 
-  /* ── SCR-MEGAHAT (spec §3.8) ─────────────────────────────── */
+  /* ── SCR-MEGAHAT (GDD §12.7) ─────────────────────────────── */
+  // Oversized hats cover 4-15 spaces. Prize cells revealed one-by-one with coin values.
   private async showMegaHatBonus(r: MegaHatResult, overlay: HTMLElement, inner: HTMLElement): Promise<void> {
     inner.innerHTML = `
       <div class="bonus-title">MEGA HAT BONUS</div>
-      <div class="bonus-desc">${r.spaceCount} hat space${r.spaceCount !== 1 ? 's' : ''} — non-hat cells award prizes!</div>
+      <div class="bonus-desc">${r.spaceCount} oversized hat space${r.spaceCount !== 1 ? 's' : ''} — non-hat cells reveal prizes!</div>
       <div class="megahat-grid" id="mh-grid" role="grid" aria-label="Mega hat bonus grid"></div>
+      <div class="bonus-sub-row">
+        <span class="bonus-stat-lbl">PRIZES</span>
+        <span id="mh-prizes" class="bonus-stat-val">0</span>
+        <span class="bonus-stat-sep">·</span>
+        <span class="bonus-stat-lbl">RUNNING</span>
+        <span id="mh-running" class="bonus-stat-val">0×</span>
+      </div>
       <div id="bonus-total" class="bonus-total" aria-live="assertive">&nbsp;</div>
       <p class="bonus-tap-hint">Tap anywhere to continue</p>`;
     overlay.classList.remove('hidden');
+    this.audio.play('dialogOpen');
 
-    const gridEl = inner.querySelector<HTMLElement>('#mh-grid')!;
+    const gridEl    = inner.querySelector<HTMLElement>('#mh-grid')!;
+    const prizesEl  = inner.querySelector<HTMLElement>('#mh-prizes')!;
+    const runningEl = inner.querySelector<HTMLElement>('#mh-running')!;
+    const totEl     = inner.querySelector<HTMLElement>('#bonus-total')!;
     const cells: HTMLElement[] = [];
     for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
       const el = document.createElement('div');
-      el.className = 'megahat-cell';
+      el.className = 'megahat-cell unrevealed';
       el.setAttribute('role', 'gridcell');
+      el.setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: hidden`);
+      el.textContent = '?';
       gridEl.appendChild(el);
       cells.push(el);
     }
-    await sleep(400);
+    await sleep(500);
+
+    let prizeCount   = 0;
+    let runningTotal = 0;
 
     for (let i = 0; i < 15; i++) {
-      const row = Math.floor(i / 5), col = i % 5;
+      const row   = Math.floor(i / 5);
+      const col   = i % 5;
       const isHat = r.grid[row]?.[col] === 'hat';
       const prize = r.prizeGrid[row]?.[col] ?? 0;
+
+      cells[i].classList.remove('unrevealed');
+      cells[i].classList.add('revealing');
+      await sleep(40);
+      cells[i].classList.remove('revealing');
+
       if (isHat) {
         cells[i].textContent = '🎩';
         cells[i].classList.add('hat');
@@ -1286,21 +1446,29 @@ export class Game {
         cells[i].textContent = prize > 0 ? `${prize}×` : '—';
         cells[i].classList.add(prize > 0 ? 'prize' : 'empty');
         cells[i].setAttribute('aria-label', `Row ${row + 1} col ${col + 1}: ${prize > 0 ? prize + ' times' : 'empty'}`);
+        if (prize > 0) {
+          prizeCount++;
+          runningTotal += prize;
+          prizesEl.textContent  = String(prizeCount);
+          runningEl.textContent = `${runningTotal}×`;
+        }
       }
       this.audio.play('uiTick');
-      await sleep(100);
+      await sleep(110);
     }
 
-    const totEl = inner.querySelector<HTMLElement>('#bonus-total')!;
-    animateValue(0, r.payout, 900, v => { totEl.textContent = `${r.total}× total — WIN: ${fmt(v)} coins`; });
-    if (r.payout > 0) this.audio.play(r.payout > BET_LEVELS[this.betLevelIdx].total * 20 ? 'bigWin' : 'niceWin');
-    await sleep(1200);
+    const winAudio = r.payout >= BET_LEVELS[this.betLevelIdx].total * 50 ? 'bigWin'
+                   : r.payout > 0 ? 'niceWin' : 'smallWin';
+    this.audio.play(winAudio);
+    animateValue(0, r.payout, 1000, v => { totEl.textContent = `${r.total}× total — WIN: ${fmt(v)} coins`; });
+    await sleep(1400);
 
     await new Promise<void>(res => {
       overlay.addEventListener('click', () => res(), { once: true });
-      setTimeout(res, 5000);
+      setTimeout(res, 6000);
     });
     overlay.classList.add('hidden');
+    this.audio.play('dialogClose');
   }
 
   /* ══════════════════════════════════════════════════════
