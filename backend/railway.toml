@@ -1,0 +1,10 @@
+[build]
+# Tell Railway to use the Dockerfile in this directory
+# and treat this directory as the build root
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
