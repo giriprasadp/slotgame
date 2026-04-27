@@ -29,7 +29,7 @@ RUN npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Prebuilt migration SQL files (needed by drizzle-kit migrate at startup)
-COPY --from=builder /app/src/db/migrations ./src/db/migrations
+COPY --from=builder /app/src/db/migrations ./dist/db/migrations
 
 # Keys directory is mounted as a volume — just ensure it exists with correct owner
 RUN mkdir -p keys && chown -R appuser:appgroup /app
