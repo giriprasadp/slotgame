@@ -785,7 +785,10 @@ export class Game {
   ══════════════════════════════════════════════════════ */
   private async processFeatures(response: SpinResponse, triggerSource: 'natural' | 'scatter' | 'buy' = 'natural'): Promise<void> {
     for (const feat of response.features) {
-      if (this.autoplayActive && this.autoplayStopOnFeature) this.stopAutoplay('feature triggered');
+      // Only stop autoplay for FS_TRIGGER — FS takes over the spin loop so autoplay can't
+      // continue anyway. WHEEL plays synchronously inside processFeatures and returns, so
+      // autoplay should resume naturally after the wheel feature completes.
+      if (feat.type === 'FS_TRIGGER' && this.autoplayActive && this.autoplayStopOnFeature) this.stopAutoplay('feature triggered');
 
       if (feat.type === 'FS_TRIGGER') {
         // Guard against server bug: FS_TRIGGER should never appear during an active FS session
