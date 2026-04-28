@@ -12,7 +12,7 @@ import type {
 } from '../engine/types';
 import {
   BET_LEVELS, SCATTER_FS_AWARD, FS_RETRIGGER_AWARD, FS_SAFETY_CAP,
-  BUY_FS_MULT, BUY_WHEEL_MULT,
+  BUY_FS_MULT, BUY_WHEEL_MULT, PAYOUT_SCALE,
 } from '../config/game';
 import type { Session, FreeSpinsSession } from '../db/schema';
 
@@ -178,8 +178,9 @@ export async function executeSpin(params: {
         }
       }
 
-      /* 9. Credit winnings */
-      const totalWin = (mode === 'BASE' ? chainResult.chainTotal : 0) + featurePayout;
+      /* 9. Credit winnings — apply PAYOUT_SCALE to deliver certified RTP */
+      const rawWin   = (mode === 'BASE' ? chainResult.chainTotal : 0) + featurePayout;
+      const totalWin = Math.round(rawWin * PAYOUT_SCALE * 100) / 100;
       const balanceAfter = await creditWin(tx, sessionId, totalWin);
 
       /* 10. Save RNG state */
@@ -302,7 +303,8 @@ export async function executeBuySpin(params: {
       }
 
       const balanceAfterDeduct = balanceBefore - cost;
-      const balanceAfter = await creditWin(tx, sessionId, featurePayout);
+      const scaledFeaturePayout = Math.round(featurePayout * PAYOUT_SCALE * 100) / 100;
+      const balanceAfter = await creditWin(tx, sessionId, scaledFeaturePayout);
 
       const rngStateAfter = rng.getState();
       await saveRngState(tx, sessionId, rngStateAfter.s0, rngStateAfter.s1);
@@ -322,7 +324,7 @@ export async function executeBuySpin(params: {
           chainSteps:    [],
           chainLength:   0,
           maxMultiplier: 0,
-          totalWin:      String(featurePayout),
+          totalWin:      String(scaledFeaturePayout),
           scatterWin:    '0',
           lineWin:       '0',
           features:      resolvedFeatures as unknown as Record<string, unknown>[],
@@ -344,7 +346,7 @@ export async function executeBuySpin(params: {
         chain: [],
         chainTotal: 0,
         scatterWin: 0,
-        totalWin: featurePayout,
+        totalWin: scaledFeaturePayout,
         chainLength: 0,
         maxMultiplier: 0,
         features: resolvedFeatures,

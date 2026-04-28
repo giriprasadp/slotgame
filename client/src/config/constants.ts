@@ -142,23 +142,24 @@ export const JACKPOT_TIERS = [
   { id:'Mini',  base:10,  weight:0.50 },
 ];
 
-/* Paytable: multipliers of total bet for 3/4/5 matching symbols (GDD §4 / Symbols & Paytable sheet) */
+/* Paytable: multipliers of total bet for 3/4/5 matching symbols.
+   Must stay in sync with backend/src/config/game.ts PAYTABLE. */
 export const PAYTABLE: Record<string, [number, number, number]> = {
-  C04: [2,    5,    25  ],   // Wolf — top premium
-  C03: [1.5,  3,    15  ],   // Pig Bricks
-  C02: [1,    2.5,  10  ],   // Pig Sticks
-  C01: [0.8,  2,    7.5 ],   // Pig Straw
-  S08: [0.5,  1.5,  5   ],   // Gem Red
-  S07: [0.4,  1.2,  4   ],   // Gem Green
-  S06: [0.3,  1,    3   ],   // Gem Blue
-  S05: [0.2,  0.8,  2.5 ],   // A
-  S04: [0.2,  0.7,  2   ],   // K
-  S03: [0.15, 0.5,  1.5 ],   // Q
-  S02: [0.15, 0.5,  1.5 ],   // J
-  S01: [0.1,  0.4,  1   ],   // 10
+  C04: [3.1,  7.8,  38.9 ],  // Wolf — top premium
+  C03: [2.3,  4.7,  23.3 ],  // Pig Bricks
+  C02: [1.6,  3.9,  15.6 ],  // Pig Sticks
+  C01: [1.2,  3.1,  11.7 ],  // Pig Straw
+  S08: [0.8,  2.3,  7.8  ],  // Gem Red
+  S07: [0.6,  1.9,  6.2  ],  // Gem Green
+  S06: [0.5,  1.6,  4.7  ],  // Gem Blue
+  S05: [0.3,  1.2,  3.9  ],  // A
+  S04: [0.3,  1.1,  3.1  ],  // K
+  S03: [0.2,  0.8,  2.3  ],  // Q
+  S02: [0.2,  0.8,  2.3  ],  // J
+  S01: [0.2,  0.6,  1.6  ],  // 10
 };
 
-/* Scatter pays (× total bet) — GDD §11 */
-export const SCATTER_PAY: Record<number, number> = { 3: 2, 4: 10, 5: 50 };
+/* Scatter pays (× total bet) — must match backend SCATTER_PAY */
+export const SCATTER_PAY: Record<number, number> = { 3: 3.1, 4: 15.6, 5: 77.8 };
 
 export const PAY_ORDER_DISPLAY = ['C04','C03','C02','C01','S08','S07','S06','S05','S04','S03','S02','S01'];
