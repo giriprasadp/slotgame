@@ -24,10 +24,7 @@ export async function sessionRoutes(app: FastifyInstance) {
       screenRes: body.data.screenRes,
     });
 
-    const token = await reply.jwtSign(
-      { sub: sess.id },
-      { expiresIn: '4h' }
-    );
+    const token = await reply.jwtSign({ sub: sess.id });
 
     const balance = parseFloat(sess.balance as string);
     request.log.info({

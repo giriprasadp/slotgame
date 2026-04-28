@@ -63,6 +63,12 @@ export function readJwtKeys() {
   if (ENV.JWT_PRIVATE_KEY_B64 && ENV.JWT_PUBLIC_KEY_B64) {
     const privateKey = Buffer.from(ENV.JWT_PRIVATE_KEY_B64, 'base64').toString('utf-8');
     const publicKey  = Buffer.from(ENV.JWT_PUBLIC_KEY_B64,  'base64').toString('utf-8');
+    const privOk = privateKey.includes('PRIVATE KEY');
+    const pubOk  = publicKey.includes('PUBLIC KEY');
+    console.log(`[jwt-keys] source=b64 private_pem_valid=${privOk} public_pem_valid=${pubOk} private_len=${privateKey.length} public_len=${publicKey.length}`);
+    if (!privOk || !pubOk) {
+      throw new Error('JWT keys from B64 env vars do not appear to be valid PEM — check JWT_PRIVATE_KEY_B64 and JWT_PUBLIC_KEY_B64');
+    }
     return { privateKey, publicKey };
   }
 
