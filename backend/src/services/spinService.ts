@@ -285,9 +285,25 @@ export async function executeBuySpin(params: {
       let featurePayout = 0;
 
       if (featureType === 'FS') {
-        // Guard: reject if an active FS session already exists for this session
-        const existingFs = await getActiveFsSession(tx, sessionId);
-        if (existingFs) throw httpError(409, 'FS_SESSION_ALREADY_ACTIVE');
+        // Guard: reject if ANY FS session (active OR completed) exists for this session.
+        // The unique constraint is on session_id unconditionally, so even a completed
+        // session blocks a new insert. In that case we must delete the old one first.
+        const [existingAny] = await tx
+          .select()
+          .from(schema.freeSpinsSessions)
+          .where(eq(schema.freeSpinsSessions.sessionId, sessionId))
+          .limit(1);
+
+        if (existingAny) {
+          if (!existingAny.completed) {
+            // Active FS session — player must play it first
+            throw httpError(409, 'FS_SESSION_ALREADY_ACTIVE');
+          }
+          // Completed FS session exists — delete it so we can insert fresh
+          await tx
+            .delete(schema.freeSpinsSessions)
+            .where(eq(schema.freeSpinsSessions.sessionId, sessionId));
+        }
 
         // Instant Free Spins (no scatter pay on buy — GDD §13.1)
         await tx.insert(schema.freeSpinsSessions).values({

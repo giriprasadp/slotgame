@@ -53,9 +53,10 @@ export async function buildApp() {
       } catch { /* fall through */ }
       return req.ip;
     },
-    errorResponseBuilder: () => ({
+    errorResponseBuilder: (_req, context) => ({
+      statusCode: 429,
       error: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests — please slow down',
+      message: `Too many requests — please slow down (retry after ${context.after})`,
     }),
   });
 

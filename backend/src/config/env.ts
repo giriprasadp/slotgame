@@ -18,7 +18,7 @@ const envSchema = z.object({
   JWT_PUBLIC_KEY_B64:  z.string().optional(),
   JWT_EXPIRY: z.string().default('4h'),
   CORS_ORIGIN: z.string().default('*'),
-  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(120),   // 120 req / 10s — supports turbo autoplay
   RATE_LIMIT_WINDOW: z.coerce.number().int().min(100).default(10000),
   ANALYTICS_STREAM_KEY: z.string().default('stream:analytics'),
   ANALYTICS_CONSUMER_GROUP: z.string().default('analytics-workers'),
