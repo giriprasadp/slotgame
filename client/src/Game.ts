@@ -464,7 +464,13 @@ export class Game {
       if (status === 503) {
         this.showMaintenanceModal();
       } else if (status === 429) {
-        this.toastRateLimit();
+        // Rate limited — pause autoplay briefly then resume; don't stop it
+        this.showToast('⏱ Slowing down — resuming in 10s…', 3000, true);
+        if (this.autoplayActive) {
+          await sleep(10000);
+          if (this.autoplayActive) this.tickAutoplay();
+        }
+        return;
       } else if (status === 401 || status === 403) {
         this.el('session-expired-overlay')?.classList.remove('hidden');
       } else if (!status) {

@@ -39,6 +39,10 @@ export async function buildApp() {
   await app.register(rateLimit, {
     max:      ENV.RATE_LIMIT_MAX,
     timeWindow: ENV.RATE_LIMIT_WINDOW,
+    // Analytics batch endpoints are fire-and-forget — exempt them so they
+    // never consume quota that would block spin requests.
+    skipOnError: true,
+    allowList: (req) => (req.url?.includes('/analytics/') ?? false),
     keyGenerator: (req) => {
       // Rate limit by session token sub claim if present, else IP
       try {
