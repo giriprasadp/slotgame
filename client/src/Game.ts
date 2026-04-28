@@ -2568,7 +2568,8 @@ export class Game {
       e.preventDefault();
       this.el('info-panel')?.classList.add('hidden');
       this.buildPaytable();
-      this.el('paytable')?.classList.remove('hidden');
+      this.updatePaytableNav(0);
+      this.openModal('paytable', 'pt-close');
     });
 
     // History (spec §3.12)
@@ -2600,6 +2601,7 @@ export class Game {
 
     // Paytable
     this.el('btn-paytable')?.addEventListener('click', (e) => {
+      if (!this.el('paytable')?.classList.contains('hidden')) return; // already open
       (e.currentTarget as HTMLElement).setAttribute('data-modal-opener', '');
       this.buildPaytable();
       this.updatePaytableNav(0);
