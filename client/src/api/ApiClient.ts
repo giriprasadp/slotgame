@@ -22,10 +22,10 @@ export class ApiClient {
     });
 
     if (!res.ok) {
-      let errBody: { error?: string; message?: string } = {};
+      let errBody: { error?: string; message?: string; code?: string } = {};
       try { errBody = await res.json(); } catch { /* swallow */ }
       const msg = errBody.error ?? errBody.message ?? `HTTP ${res.status}`;
-      const err = Object.assign(new Error(msg), { status: res.status });
+      const err = Object.assign(new Error(msg), { status: res.status, code: errBody.code ?? errBody.error });
       throw err;
     }
     return res.json() as Promise<T>;

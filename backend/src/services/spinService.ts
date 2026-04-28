@@ -285,6 +285,10 @@ export async function executeBuySpin(params: {
       let featurePayout = 0;
 
       if (featureType === 'FS') {
+        // Guard: reject if an active FS session already exists for this session
+        const existingFs = await getActiveFsSession(tx, sessionId);
+        if (existingFs) throw httpError(409, 'FS_SESSION_ALREADY_ACTIVE');
+
         // Instant Free Spins (no scatter pay on buy — GDD §13.1)
         await tx.insert(schema.freeSpinsSessions).values({
           sessionId,

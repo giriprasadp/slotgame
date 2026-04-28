@@ -386,9 +386,12 @@ export class Game {
         this.setControlsEnabled(true);
         this.setSpinLabel('SPIN');
         const status = (err as { status?: number }).status;
+        const code   = (err as { code?: string }).code;
         if (status === 503) this.showMaintenanceModal();
         else if (status === 429) this.toastRateLimit();
         else if (status === 401 || status === 403) this.el('session-expired-overlay')?.classList.remove('hidden');
+        else if (status === 409 || code === 'FS_SESSION_ALREADY_ACTIVE')
+          this.showToast('Free Spins already active — play them first!', 3000, true);
         else this.showServerErrorModal(status ? `HTTP ${status}` : '');
         return;
       }
