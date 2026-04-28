@@ -250,6 +250,7 @@ export class Game {
 
     // Session heartbeat every 10s (spec §10.5) — also measures RTT for network-quality check.
     // Uses GET /wallet (read-only) — must NOT call session/init which would create a new session.
+    let slowHeartbeatCount = 0;
     setInterval(() => {
       if (this.api.isReady()) {
         const t0 = Date.now();
@@ -260,7 +261,14 @@ export class Game {
             this.balance = d.balance;
             this.setBalanceEl(this.balance);
           }
-          if (rtt > 500) this.showNetworkQualityModal();
+          // Only show network quality modal after 3 consecutive slow responses (>2s)
+          // to avoid false positives from cross-region latency jitter
+          if (rtt > 2000) {
+            slowHeartbeatCount++;
+            if (slowHeartbeatCount >= 3) this.showNetworkQualityModal();
+          } else {
+            slowHeartbeatCount = 0;
+          }
         }).catch(() => {});
       }
     }, 10_000);
