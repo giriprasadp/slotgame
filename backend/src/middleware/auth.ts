@@ -15,7 +15,17 @@ export class AppError extends Error {
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   try {
     await request.jwtVerify();
-  } catch {
+  } catch (err) {
+    const reason = (err instanceof Error) ? err.message : String(err);
+    const authHeader = request.headers['authorization'];
+    request.log.warn({
+      event: 'auth_failed',
+      reason,
+      hasAuthHeader: !!authHeader,
+      authHeaderPrefix: authHeader ? authHeader.slice(0, 20) : null,
+      url: request.url,
+      method: request.method,
+    }, `JWT verification failed: ${reason}`);
     reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Missing or invalid token' });
   }
 }
