@@ -200,6 +200,9 @@ export class Game {
     // Show tap-to-play — must happen while splash is visible (before #app shown)
     const ttp = document.getElementById('tap-to-play');
     if (ttp) {
+      // Hide the loader so the button has full room at the bottom
+      const loaderGroup = document.getElementById('splash-loading-group');
+      if (loaderGroup) loaderGroup.classList.add('hidden');
       ttp.classList.remove('hidden');
       await new Promise<void>(res => ttp.addEventListener('click', () => res(), { once: true }));
     }
@@ -1671,8 +1674,6 @@ export class Game {
     const bar = this.el('splash-bar') as HTMLElement | null;
     if (!bar) return;
     bar.style.width = pct + '%';
-    bar.style.background = 'linear-gradient(90deg,#00c8ff 0%,#00e5ff 50%,#00a8cc 100%)';
-    bar.style.boxShadow = '0 0 12px rgba(0,200,255,.6)';
   }
 
   private setSplashStatus(msg: string): void {

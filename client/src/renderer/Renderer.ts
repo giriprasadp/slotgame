@@ -106,15 +106,24 @@ export class Renderer {
     this.canvas.style.height = this.H + 'px';
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    const pad    = Math.min(this.W, this.H) * 0.04;
-    const availW = this.W - pad * 2;
-    const availH = this.H - pad * 2;
+    // Reserve space for floating HUDs (must match CSS variable heights)
+    const HUD_TOP = 88;   // hud-top (48) + mult-ladder (36) + 4px gap
+    const HUD_BOT = 120;  // win-strip (40) + hud-bot (76) + 4px gap
+    const sidePad = Math.max(24, this.W * 0.025);
+    const availW  = this.W - sidePad * 2;
+    const availH  = this.H - HUD_TOP - HUD_BOT;
     const cellByW = Math.floor(availW / 5);
     const cellByH = Math.floor(availH / 3);
-    this.cellSize = Math.min(cellByW, cellByH);
+    // Scale back to 85% so the background peeks around the grid
+    this.cellSize = Math.floor(Math.min(cellByW, cellByH) * 0.85);
     const gw = this.cellSize * 5;
     const gh = this.cellSize * 3;
-    this.gridArea = { x: (this.W - gw) / 2, y: (this.H - gh) / 2, w: gw, h: gh };
+    this.gridArea = {
+      x: (this.W - gw) / 2,
+      y: HUD_TOP + (availH - gh) / 2,
+      w: gw,
+      h: gh,
+    };
   }
 
   /* ── Public API ─────────────────────────────────── */
@@ -354,7 +363,7 @@ export class Renderer {
       // Subtle darkening vignette so HUD elements stay readable
       const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.15, W * 0.5, H * 0.5, H * 0.9);
       vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,.45)');
+      vig.addColorStop(1, 'rgba(0,0,0,.18)');
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, W, H);
     } else {
@@ -377,10 +386,10 @@ export class Renderer {
     const { ctx, gridArea: { x, y, w, h }, cellSize: cs } = this;
     const pad = cs * 0.22;
 
-    // ── Inner recess (dark backing behind symbols) ─
+    // ── Inner recess (very subtle backing — keep symbols visible) ─
     ctx.save();
     this.roundRect(x - 3, y - 3, w + 6, h + 6, 12);
-    ctx.fillStyle = 'rgba(0,10,22,0.75)';
+    ctx.fillStyle = 'rgba(0,10,22,0.18)';
     ctx.fill();
     ctx.restore();
 
@@ -424,6 +433,7 @@ export class Renderer {
       ctx.drawImage(this.frameImage, fx, fy, fw, fh);
     }
   }
+
 
   private drawGrid(t: number): void {
     if (!this.grid) return;
@@ -472,22 +482,8 @@ export class Renderer {
           }
         }
 
-        // ── Speed-dependent dark overlay (makes blur more convincing at full speed)
-        if (speedRatio > 0.05) {
-          ctx.save();
-          const blurGrad = ctx.createLinearGradient(x + c * cs, y, x + c * cs, y + cs * 3);
-          const ba = speedRatio * 0.5;
-          blurGrad.addColorStop(0,   `rgba(2,8,18,${ba})`);
-          blurGrad.addColorStop(0.25,`rgba(2,8,18,0)`);
-          blurGrad.addColorStop(0.75,`rgba(2,8,18,0)`);
-          blurGrad.addColorStop(1,   `rgba(2,8,18,${ba})`);
-          ctx.fillStyle = blurGrad;
-          ctx.fillRect(x + c * cs, y, cs, cs * 3);
-          ctx.restore();
-        }
-
         // ── Primary symbols ───────────────────────────────────────────────────
-        const symAlpha = 1 - speedRatio * 0.5;
+        const symAlpha = 1 - speedRatio * 0.25;
         for (let row = -1; row <= 3; row++) {
           const idx = topIdx + row;
           if (idx < 0 || idx >= r.strip.length) continue;
@@ -496,16 +492,7 @@ export class Renderer {
           this.drawSymbol(x + c * cs, drawY, cs, { sym: r.strip[idx], golden: false }, symAlpha, t);
         }
 
-        // ── Top/bottom vignette ───────────────────────────────────────────────
-        ctx.save();
-        const vig = ctx.createLinearGradient(x + c * cs, y, x + c * cs, y + cs * 3);
-        vig.addColorStop(0,    'rgba(1,5,15,.88)');
-        vig.addColorStop(0.14, 'rgba(1,5,15,0)');
-        vig.addColorStop(0.86, 'rgba(1,5,15,0)');
-        vig.addColorStop(1,    'rgba(1,5,15,.88)');
-        ctx.fillStyle = vig;
-        ctx.fillRect(x + c * cs, y, cs, cs * 3);
-        ctx.restore();
+        // ── Top/bottom vignette (removed — was causing black effect during spin) ──
 
       } else {
         // ── Idle/settled: draw grid symbols cleanly ──────────────────────────

@@ -23,7 +23,7 @@
     #splash {
       position: fixed; inset: 0; z-index: 1000;
       overflow: hidden;
-      background: #020d1a url('/pearls/splash-art.png') center/cover no-repeat;
+      background: #020d1a url('/pearls/game-title.png') center/cover no-repeat;
     }
     /* pin controls to bottom of viewport before style.css loads; hide until ready */
     .splash-inner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001; opacity: 0; }
@@ -53,30 +53,36 @@
 <!-- ═══════════════════════════════════════════════════════════════
      SCR-LOADING — Boot Loader  (spec §3.1)
 ═══════════════════════════════════════════════════════════════ -->
-<div id="splash" class="splash" role="status" aria-label="Loading Huff and Puff">
+<div id="splash" class="splash" role="status" aria-label="Loading Pearls of the Abyss">
+
+  <!-- Animated bubbles -->
+  <div class="splash-bubbles" aria-hidden="true">
+    <span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span>
+  </div>
+
+  <!-- Bottom controls panel -->
   <div class="splash-inner">
-    <div class="splash-brand">
-      <img src="/pearls/game-title.png" alt="Huff and Puff" class="splash-title-img" />
-    </div>
 
-    <div class="splash-tip-wrap" aria-live="polite">
-      <p id="splash-tip" class="splash-tip">Free Spins trigger on 3 Scatters anywhere on the reels</p>
-    </div>
+    <!-- CTA — hidden until ready -->
+    <button id="tap-to-play" class="btn-tap-to-play hidden" aria-label="Tap to start game">
+      <span class="tap-icon">▶</span>
+      <span class="tap-label">TAP TO PLAY</span>
+    </button>
 
-    <div class="splash-loader-group">
+    <!-- Loading state -->
+    <div class="splash-loader-group" id="splash-loading-group">
+      <p id="splash-status" class="splash-status">Connecting to server…</p>
       <div class="splash-loader"
            role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
            aria-label="Loading progress">
-        <div id="splash-bar" class="splash-bar"></div>
+        <div id="splash-bar" class="splash-bar">
+          <div class="splash-bar-shimmer"></div>
+        </div>
       </div>
-      <p id="splash-status" class="splash-status">Connecting to server…</p>
     </div>
 
-    <button id="tap-to-play" class="btn-tap-to-play hidden" aria-label="Tap to start game">
-      ▶&nbsp;&nbsp;TAP TO PLAY
-    </button>
-
-    <p class="splash-footer">© 2026 Juego Studioz · 18+ · Play Responsibly</p>
+    <p class="splash-footer">© 2026 Juego Studioz &nbsp;·&nbsp; 18+ &nbsp;·&nbsp; Play Responsibly</p>
   </div>
 </div>
 
@@ -185,6 +191,25 @@
     <canvas id="game-canvas"
             aria-label="Slot machine reels, 3 rows by 5 columns"
             role="img"></canvas>
+
+    <!-- Ambient underwater effects — pointer-events:none so they never block clicks -->
+    <div class="game-fx" aria-hidden="true">
+      <!-- Rising bubbles -->
+      <div class="fx-bubbles">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <!-- Floating caustic light rays from above -->
+      <div class="fx-rays">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <!-- Slow drifting particles (tiny glints) -->
+      <div class="fx-glints">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
   </main>
 
   <!-- ───────────────────────────────────────────────────────
