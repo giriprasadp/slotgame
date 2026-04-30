@@ -3,6 +3,7 @@
  * Drives: API calls, Renderer, AudioManager, all HUD DOM.
  */
 import { Renderer, RendererCell } from './renderer/Renderer';
+import { AssetLoader } from './assets/AssetLoader';
 import { ApiClient } from './api/ApiClient';
 import { AudioManager } from './audio/AudioManager';
 import { sleep, animateValue } from './utils/helpers';
@@ -93,7 +94,7 @@ export class Game {
   private tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
   /* Settings persistence key */
-  private readonly SETTINGS_KEY = 'huff-puff-settings';
+  private readonly SETTINGS_KEY = 'pearls-abyss-settings';
 
   /* Pending bet-high confirmation */
   private pendingBetLevelIdx: number | null = null;
@@ -186,10 +187,10 @@ export class Game {
 
     // Orientation rotate hint (spec §6.4) — show once on mobile portrait first load
     if (window.innerWidth < 600 && window.innerHeight > window.innerWidth) {
-      const hintShown = localStorage.getItem('huff-puff-rotate-hint');
+      const hintShown = localStorage.getItem('pearls-abyss-rotate-hint');
       if (!hintShown) {
         this.el('rotate-hint')?.classList.remove('hidden');
-        localStorage.setItem('huff-puff-rotate-hint', '1');
+        localStorage.setItem('pearls-abyss-rotate-hint', '1');
         this.el('rotate-hint-dismiss')?.addEventListener('click', () => {
           this.el('rotate-hint')?.classList.add('hidden');
         }, { once: true });
@@ -218,6 +219,12 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.renderer.setGrid(this.grid);
 
+    // Preload PSD-extracted symbol images (non-blocking — renderer falls back to vectors until ready)
+    const assetLoader = new AssetLoader();
+    assetLoader.load().then(() => {
+      this.renderer.setImages(assetLoader.symbols);
+    }).catch(err => console.warn('[Game] Asset load failed:', err));
+
     // Wire canvas tap-hold tooltips for symbols (spec §6 TIP-SCATTER/WILD/etc.)
     this.wireCanvasSymbolTooltips(canvas);
 
@@ -227,7 +234,7 @@ export class Game {
 
     // Tutorial — first-time only (spec §1.3); flag persisted in localStorage
     // Must run after #app is visible so the overlay can be interacted with
-    const tutSeen = localStorage.getItem('huff-puff-tutorial-seen') === 'true';
+    const tutSeen = localStorage.getItem('pearls-abyss-tutorial-seen') === 'true';
     if (!tutSeen) await this.showTutorial();
 
     // Session-time chip ticker — update every 30s (spec §J.3)
@@ -1662,7 +1669,10 @@ export class Game {
 
   private setSplashProgress(pct: number): void {
     const bar = this.el('splash-bar') as HTMLElement | null;
-    if (bar) bar.style.width = pct + '%';
+    if (!bar) return;
+    bar.style.width = pct + '%';
+    bar.style.background = 'linear-gradient(90deg,#00c8ff 0%,#00e5ff 50%,#00a8cc 100%)';
+    bar.style.boxShadow = '0 0 12px rgba(0,200,255,.6)';
   }
 
   private setSplashStatus(msg: string): void {
@@ -1807,7 +1817,7 @@ export class Game {
 
       const done = () => {
         ov.classList.add('hidden');
-        localStorage.setItem('huff-puff-tutorial-seen', 'true');
+        localStorage.setItem('pearls-abyss-tutorial-seen', 'true');
         this.track('tutorial_completed', { step });
         res();
       };
@@ -1960,7 +1970,7 @@ export class Game {
 
   /* ── MOD-AGE-GATE  (spec §4) ────────────────── */
   private maybeShowAgeGate(): Promise<void> {
-    const VERIFIED_KEY = 'huff-puff-age-verified';
+    const VERIFIED_KEY = 'pearls-abyss-age-verified';
     if (localStorage.getItem(VERIFIED_KEY)) return Promise.resolve();
     const m = this.el('age-gate-modal');
     if (!m) return Promise.resolve();
@@ -2782,7 +2792,7 @@ export class Game {
     });
 
     // Language change (spec MOD-LANG-CHANGE §4)
-    let pendingLang = localStorage.getItem('huff-puff-locale') ?? 'en-US';
+    let pendingLang = localStorage.getItem('pearls-abyss-locale') ?? 'en-US';
     this.el('set-lang')?.addEventListener('change', (e) => {
       const sel = e.currentTarget as HTMLSelectElement;
       pendingLang = sel.value;
@@ -2791,13 +2801,13 @@ export class Game {
       this.track('lang_change_confirm', { locale: pendingLang });
     });
     this.el('lc-reload')?.addEventListener('click', () => {
-      localStorage.setItem('huff-puff-locale', pendingLang);
+      localStorage.setItem('pearls-abyss-locale', pendingLang);
       location.reload();
     }, { once: true });
     this.el('lc-cancel')?.addEventListener('click', () => {
       this.el('lang-change-modal')?.classList.add('hidden');
       const sel = this.el('set-lang') as HTMLSelectElement | null;
-      if (sel) sel.value = localStorage.getItem('huff-puff-locale') ?? 'en-US';
+      if (sel) sel.value = localStorage.getItem('pearls-abyss-locale') ?? 'en-US';
     });
 
     // MOD-SERVER-ERROR buttons
@@ -3188,7 +3198,7 @@ export class Game {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'huff-puff-history-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.download = 'pearls-abyss-history-' + new Date().toISOString().slice(0, 10) + '.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     this.track('history_exported', { rows: this.spinHistory.length });

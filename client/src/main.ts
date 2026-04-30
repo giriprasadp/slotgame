@@ -1,4 +1,5 @@
 import './style.css';
+// v2
 import { ApiClient } from './api/ApiClient';
 import { Game } from './Game';
 

@@ -4,6 +4,7 @@
  * Matches Light & Wonder / Huff N Puff visual quality.
  */
 import { SYMBOLS, PAYLINES, SPIN_POOL } from '../config/constants';
+import type { ImageMap } from '../assets/AssetLoader';
 
 export interface RendererCell { sym: string; golden: boolean }
 
@@ -70,12 +71,27 @@ export class Renderer {
   private winLineDraw: WinLineDraw | null = null;
   private anticipationReels: Set<number> = new Set();
   private lastT = 0;
+  private images: ImageMap = {};
+  private bgImage:    HTMLImageElement | null = null;
+  private frameImage: HTMLImageElement | null = null;
+
+  private loadBgImages(): void {
+    const loadImg = (src: string, cb: (img: HTMLImageElement) => void) => {
+      const img = new Image();
+      img.onload = () => cb(img);
+      img.onerror = () => console.warn('[Renderer] Could not load', src);
+      img.src = src;
+    };
+    loadImg('/pearls/bg.png',                    img => { this.bgImage    = img; });
+    loadImg('/pearls/ui/reel-frame-single.png',  img => { this.frameImage = img; });
+  }
 
   constructor(canvasEl: HTMLCanvasElement) {
     this.canvas = canvasEl;
     this.ctx    = canvasEl.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    this.loadBgImages();
     requestAnimationFrame(t => this.loop(t));
   }
 
@@ -104,6 +120,9 @@ export class Renderer {
   /* ── Public API ─────────────────────────────────── */
 
   setGrid(g: RendererCell[][]): void { this.grid = g; }
+
+  /** Provide preloaded symbol images from AssetLoader. Call once after load. */
+  setImages(images: ImageMap): void { this.images = images; }
 
   /** Returns {row, col} (0-based) for a canvas CSS-pixel coordinate, or null if outside grid. */
   getCellAt(cssX: number, cssY: number): { row: number; col: number } | null {
@@ -321,43 +340,47 @@ export class Renderer {
 
   private drawBackground(): void {
     const { W, H, ctx } = this;
-    // Deep atmospheric gradient — dark center, warm edges
-    const bg = ctx.createRadialGradient(W * 0.5, H * 0.42, H * 0.05, W * 0.5, H * 0.5, H * 0.9);
-    bg.addColorStop(0,   '#2c1810');
-    bg.addColorStop(0.5, '#1a0c08');
-    bg.addColorStop(1,   '#0a0404');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
 
-    // Subtle vignette corners
-    const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.3, W * 0.5, H * 0.5, H * 0.85);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,.55)');
-    ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, W, H);
+    if (this.bgImage) {
+      // Scale to cover while preserving aspect ratio
+      const imgAspect = this.bgImage.naturalWidth / this.bgImage.naturalHeight;
+      const canvAspect = W / H;
+      let bw: number, bh: number, bx: number, by: number;
+      if (canvAspect > imgAspect) { bw = W; bh = W / imgAspect; }
+      else                         { bh = H; bw = H * imgAspect; }
+      bx = (W - bw) / 2; by = (H - bh) / 2;
+      ctx.drawImage(this.bgImage, bx, by, bw, bh);
+
+      // Subtle darkening vignette so HUD elements stay readable
+      const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.15, W * 0.5, H * 0.5, H * 0.9);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,.45)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      // Fallback — deep ocean gradient until image loads
+      const bg = ctx.createRadialGradient(W * 0.5, H * 0.42, H * 0.05, W * 0.5, H * 0.5, H * 0.9);
+      bg.addColorStop(0,   '#021830');
+      bg.addColorStop(0.5, '#010d1a');
+      bg.addColorStop(1,   '#000508');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.3, W * 0.5, H * 0.5, H * 0.85);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,.55)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   private drawFrame(): void {
     const { ctx, gridArea: { x, y, w, h }, cellSize: cs } = this;
     const pad = cs * 0.22;
 
-    // ── Outer cabinet shadow ──────────────────────
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.7)';
-    ctx.shadowBlur  = 40;
-    this.roundRect(x - pad, y - pad, w + pad * 2, h + pad * 2, 22);
-    const outerGrad = ctx.createLinearGradient(0, y - pad, 0, y + h + pad);
-    outerGrad.addColorStop(0,   '#9a3d2c');
-    outerGrad.addColorStop(0.4, '#6b2418');
-    outerGrad.addColorStop(1,   '#2e0e08');
-    ctx.fillStyle = outerGrad;
-    ctx.fill();
-    ctx.restore();
-
     // ── Inner recess (dark backing behind symbols) ─
     ctx.save();
     this.roundRect(x - 3, y - 3, w + 6, h + 6, 12);
-    ctx.fillStyle = '#0d0608';
+    ctx.fillStyle = 'rgba(0,10,22,0.75)';
     ctx.fill();
     ctx.restore();
 
@@ -367,21 +390,21 @@ export class Renderer {
       ctx.beginPath();
       ctx.rect(x + c * cs, y, cs, h);
       ctx.fillStyle = c % 2 === 0
-        ? 'rgba(255,255,255,.012)'
+        ? 'rgba(0,180,220,.015)'
         : 'rgba(0,0,0,.06)';
       ctx.fill();
       ctx.restore();
     }
 
-    // ── Column dividers (vertical separators) ─────
+    // ── Column dividers ───────────────────────────
     ctx.save();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     for (let c = 1; c < 5; c++) {
       const divX = x + c * cs;
       const divGrad = ctx.createLinearGradient(0, y, 0, y + h);
-      divGrad.addColorStop(0,   'rgba(255,255,255,.05)');
-      divGrad.addColorStop(0.5, 'rgba(255,255,255,.18)');
-      divGrad.addColorStop(1,   'rgba(255,255,255,.05)');
+      divGrad.addColorStop(0,   'rgba(0,200,255,.04)');
+      divGrad.addColorStop(0.5, 'rgba(0,200,255,.14)');
+      divGrad.addColorStop(1,   'rgba(0,200,255,.04)');
       ctx.strokeStyle = divGrad;
       ctx.beginPath();
       ctx.moveTo(divX, y + cs * 0.06);
@@ -390,13 +413,16 @@ export class Renderer {
     }
     ctx.restore();
 
-    // ── Rim highlight (top edge bevel) ────────────
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,.18)';
-    ctx.lineWidth   = 1.5;
-    this.roundRect(x - pad + 2, y - pad + 2, w + pad * 2 - 4, h + pad * 2 - 4, 22);
-    ctx.stroke();
-    ctx.restore();
+    // ── Side Frame PNG (decorative mermaid art, right side of reels) ─
+    // PSD-derived ratios: Frame layer at left=1864,top=472 within 1670×1004 grid
+    // relX=0.7964, relY=-0.0448, relW=0.2066, relH=1.0876
+    if (this.frameImage) {
+      const fw = w * 0.2066;
+      const fh = h * 1.0876;
+      const fx = x + w * 0.7964;
+      const fy = y + h * (-0.0448);
+      ctx.drawImage(this.frameImage, fx, fy, fw, fh);
+    }
   }
 
   private drawGrid(t: number): void {
@@ -451,10 +477,10 @@ export class Renderer {
           ctx.save();
           const blurGrad = ctx.createLinearGradient(x + c * cs, y, x + c * cs, y + cs * 3);
           const ba = speedRatio * 0.5;
-          blurGrad.addColorStop(0,   `rgba(18,9,7,${ba})`);
-          blurGrad.addColorStop(0.25,`rgba(18,9,7,0)`);
-          blurGrad.addColorStop(0.75,`rgba(18,9,7,0)`);
-          blurGrad.addColorStop(1,   `rgba(18,9,7,${ba})`);
+          blurGrad.addColorStop(0,   `rgba(2,8,18,${ba})`);
+          blurGrad.addColorStop(0.25,`rgba(2,8,18,0)`);
+          blurGrad.addColorStop(0.75,`rgba(2,8,18,0)`);
+          blurGrad.addColorStop(1,   `rgba(2,8,18,${ba})`);
           ctx.fillStyle = blurGrad;
           ctx.fillRect(x + c * cs, y, cs, cs * 3);
           ctx.restore();
@@ -473,10 +499,10 @@ export class Renderer {
         // ── Top/bottom vignette ───────────────────────────────────────────────
         ctx.save();
         const vig = ctx.createLinearGradient(x + c * cs, y, x + c * cs, y + cs * 3);
-        vig.addColorStop(0,    'rgba(13,6,5,.88)');
-        vig.addColorStop(0.14, 'rgba(13,6,5,0)');
-        vig.addColorStop(0.86, 'rgba(13,6,5,0)');
-        vig.addColorStop(1,    'rgba(13,6,5,.88)');
+        vig.addColorStop(0,    'rgba(1,5,15,.88)');
+        vig.addColorStop(0.14, 'rgba(1,5,15,0)');
+        vig.addColorStop(0.86, 'rgba(1,5,15,0)');
+        vig.addColorStop(1,    'rgba(1,5,15,.88)');
         ctx.fillStyle = vig;
         ctx.fillRect(x + c * cs, y, cs, cs * 3);
         ctx.restore();
@@ -668,7 +694,7 @@ export class Renderer {
     const sym = SYMBOLS[cell.sym];
     if (!sym) return;
     const ctx   = this.ctx;
-    const pad   = size * 0.08;
+    const pad   = size * 0.06;
     const cx    = x + size / 2;
     const cy    = y + size / 2;
     const inner = size - pad * 2;
@@ -676,57 +702,75 @@ export class Renderer {
     ctx.save();
     ctx.globalAlpha *= alpha;
 
-    // Background tile
+    // ── Background tile ───────────────────────────────────────────────────────
     this.roundRect(x + pad, y + pad, inner, inner, size * 0.14);
     const bgGrad = ctx.createLinearGradient(0, y + pad, 0, y + pad + inner);
     if (cell.sym === 'W01' || cell.sym === 'W02') {
-      bgGrad.addColorStop(0, '#FFC24A'); bgGrad.addColorStop(1, '#B8701A');
+      bgGrad.addColorStop(0, '#003c5e'); bgGrad.addColorStop(1, '#001e30');
     } else if (cell.sym === 'SC01') {
-      bgGrad.addColorStop(0, '#E26A4A'); bgGrad.addColorStop(1, '#5E1B12');
+      bgGrad.addColorStop(0, '#002d4a'); bgGrad.addColorStop(1, '#001220');
     } else if (cell.golden) {
       bgGrad.addColorStop(0, '#FFE289'); bgGrad.addColorStop(1, '#B8701A');
     } else if (sym.cat === 'character') {
-      bgGrad.addColorStop(0, '#4a3a3a'); bgGrad.addColorStop(1, '#2a1c1c');
+      bgGrad.addColorStop(0, '#003d5c'); bgGrad.addColorStop(1, '#00182a');
     } else {
-      bgGrad.addColorStop(0, '#2a1f1f'); bgGrad.addColorStop(1, '#18100e');
+      bgGrad.addColorStop(0, '#002540'); bgGrad.addColorStop(1, '#000f1a');
     }
     ctx.fillStyle = bgGrad;
     ctx.fill();
 
-    // Border
-    ctx.lineWidth   = Math.max(1, size * 0.02);
-    ctx.strokeStyle = highlight ? '#FFC24A' : 'rgba(255,255,255,.08)';
+    // ── Border ────────────────────────────────────────────────────────────────
+    ctx.lineWidth   = Math.max(1, size * 0.025);
+    ctx.strokeStyle = highlight ? '#00d4ff' : 'rgba(0,180,220,.18)';
     ctx.stroke();
 
-    // Highlight glow
+    // ── Highlight glow ────────────────────────────────────────────────────────
     if (highlight) {
       const pulse = 0.5 + 0.5 * Math.sin(this.winPulse / 200);
       ctx.save();
-      ctx.shadowColor  = '#FFC24A';
-      ctx.shadowBlur   = 12 + pulse * 10;
-      ctx.strokeStyle  = `rgba(255,200,80,${0.7 + 0.3 * pulse})`;
+      ctx.shadowColor  = '#00d4ff';
+      ctx.shadowBlur   = 14 + pulse * 12;
+      ctx.strokeStyle  = `rgba(0,212,255,${0.7 + 0.3 * pulse})`;
       ctx.lineWidth    = 2 + pulse * 2;
       this.roundRect(x + pad, y + pad, inner, inner, size * 0.14);
       ctx.stroke();
       ctx.restore();
     }
 
-    // Symbol content
-    if (sym.cat === 'character') {
-      this.drawCharacter(cx, cy, size * 0.85, cell.sym);
-    } else if (sym.cat === 'basic' && ['S01','S02','S03','S04','S05'].includes(cell.sym)) {
-      this.drawCard(cx, cy, size * 0.75, cell.sym);
-    } else if (sym.cat === 'basic') {
-      this.drawGem(cx, cy, size * 0.55, sym.color);
-    } else if (cell.sym === 'W01' || cell.sym === 'W02') {
-      this.drawWild(cx, cy, size * 0.7, cell.sym === 'W02');
-    } else if (cell.sym === 'SC01') {
-      this.drawScatter(cx, cy, size * 0.6);
+    // ── Symbol content — PNG image or vector fallback ─────────────────────────
+    const img = this.images[cell.sym];
+    if (img) {
+      // Clip to the tile before drawing image so it doesn't bleed outside
+      ctx.save();
+      this.roundRect(x + pad + 1, y + pad + 1, inner - 2, inner - 2, size * 0.13);
+      ctx.clip();
+
+      // Scale to fill 90% of the cell, centred
+      const imgFit  = inner * 0.90;
+      const aspect  = img.naturalWidth / img.naturalHeight;
+      let iw: number, ih: number;
+      if (aspect >= 1) { iw = imgFit; ih = imgFit / aspect; }
+      else              { ih = imgFit; iw = imgFit * aspect; }
+      ctx.drawImage(img, cx - iw / 2, cy - ih / 2, iw, ih);
+      ctx.restore();
+    } else {
+      // Vector fallback (used while images load or for symbols without an image)
+      if (sym.cat === 'character') {
+        this.drawCharacter(cx, cy, size * 0.85, cell.sym);
+      } else if (sym.cat === 'basic' && ['S01','S02','S03','S04','S05'].includes(cell.sym)) {
+        this.drawCard(cx, cy, size * 0.75, cell.sym);
+      } else if (sym.cat === 'basic') {
+        this.drawGem(cx, cy, size * 0.55, sym.color);
+      } else if (cell.sym === 'W01' || cell.sym === 'W02') {
+        this.drawWild(cx, cy, size * 0.7, cell.sym === 'W02');
+      } else if (cell.sym === 'SC01') {
+        this.drawScatter(cx, cy, size * 0.6);
+      }
     }
 
-    // Golden shimmer
+    // ── Golden shimmer overlay ────────────────────────────────────────────────
     if (cell.golden) {
-      const shimmer = 0.3 + 0.2 * Math.sin(this.goldenShimmer / 200);
+      const shimmer = 0.25 + 0.15 * Math.sin(this.goldenShimmer / 200);
       ctx.save();
       ctx.globalAlpha = shimmer;
       ctx.fillStyle   = '#FFE289';
@@ -786,18 +830,13 @@ export class Renderer {
 
   private drawCharacter(cx: number, cy: number, size: number, symId: string): void {
     const ctx = this.ctx;
-    const emojiMap: Record<string, string> = { C01:'🐖', C02:'🐷', C03:'🐽', C04:'🐺' };
-    const houseMap: Record<string, string> = { C01:'🌾', C02:'🪵', C03:'🧱', C04:''   };
+    const emojiMap: Record<string, string> = { C01:'�', C02:'🐡', C03:'🐙', C04:'🦈' };
     ctx.save();
     ctx.font          = `${Math.floor(size * 0.85)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
     ctx.textAlign     = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(emojiMap[symId] ?? '?', cx, cy - size * 0.08);
-    if (houseMap[symId]) {
-      ctx.font = `${Math.floor(size * 0.3)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
-      ctx.fillText(houseMap[symId], cx, cy + size * 0.34);
-    }
+    ctx.fillText(emojiMap[symId] ?? '❓', cx, cy - size * 0.08);
     ctx.font      = `600 ${Math.max(9, Math.floor(size * 0.12))}px Inter,sans-serif`;
-    ctx.fillStyle = '#F4EADE';
+    ctx.fillStyle = '#A0E4FF';
     ctx.fillText(SYMBOLS[symId].name.split(' ')[0], cx, cy + size * 0.48);
     ctx.restore();
   }

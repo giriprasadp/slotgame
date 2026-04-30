@@ -3,12 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#1C1414" />
-  <meta name="description" content="Huff and Puff — Cascading Morph Slot. 3×5 grid, 10 paylines, Free Spins, Wheel Feature." />
-  <title>Huff &amp; Puff — Cascading Morph Slot</title>
+  <meta name="theme-color" content="#020d1a" />
+  <meta name="description" content="Huff and Puff — 3×5 slot. 10 paylines, Free Spins, Wheel Feature." />
+  <title>Huff and Puff</title>
+  <link rel="icon" type="image/png" href="/pearls/app-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Critical inline CSS — eliminates FOUC before style.css loads via JS module -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #020d1a;
+    }
+    /* app starts hidden via .hidden class; splash is always visible */
+    .hidden { display: none !important; }
+    a.skip-link { display: none; }
+    #splash {
+      position: fixed; inset: 0; z-index: 1000;
+      overflow: hidden;
+      background: #020d1a url('/pearls/splash-art.png') center/cover no-repeat;
+    }
+    /* pin controls to bottom of viewport before style.css loads; hide until ready */
+    .splash-inner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001; opacity: 0; }
+  </style>
 </head>
 <body>
 
@@ -37,9 +56,7 @@
 <div id="splash" class="splash" role="status" aria-label="Loading Huff and Puff">
   <div class="splash-inner">
     <div class="splash-brand">
-      <div class="splash-wolf" aria-hidden="true">🐺</div>
-      <h1 class="splash-title">HUFF &amp; PUFF</h1>
-      <p class="splash-sub">CASCADING MORPH SLOT</p>
+      <img src="/pearls/game-title.png" alt="Huff and Puff" class="splash-title-img" />
     </div>
 
     <div class="splash-tip-wrap" aria-live="polite">
@@ -851,7 +868,7 @@
         <details class="inf-section" open>
           <summary class="inf-section-title">HOW TO PLAY</summary>
           <div class="inf-section-body">
-            <p>Huff &amp; Puff is a 3×5 cascading morph slot with 10 fixed paylines. Match 3 or more identical symbols on a payline from left to right to win. Winning symbols are removed and new ones cascade down — re-triggering wins and advancing the multiplier ladder.</p>
+            <p>Huff and Puff is a 3×5 cascading morph slot with 10 fixed paylines. Match 3 or more identical symbols on a payline from left to right to win. Winning symbols are removed and new ones cascade down — re-triggering wins and advancing the multiplier ladder.</p>
             <p>Use <strong>BET +/−</strong> to set your stake, then press <strong>SPIN</strong>. Use <strong>AUTO</strong> to run multiple spins unattended. Enable <strong>TURBO</strong> for faster animations.</p>
           </div>
         </details>
@@ -859,8 +876,8 @@
         <details class="inf-section">
           <summary class="inf-section-title">SYMBOLS &amp; PAYTABLE</summary>
           <div class="inf-section-body">
-            <p><strong>High-pay symbols</strong> — Wolf · Pig · Mansion · Buzzsaw · Hat</p>
-            <p><strong>Low-pay royals</strong> — A · K · Q · J · 10 · 9</p>
+            <p><strong>High-pay symbols</strong> — Jackpot Pearl · Free Spin · Bonus · Sea Fish</p>
+            <p><strong>Low-pay symbols</strong> — Fish · Starfish · Plant · A · K · Q · J · 10</p>
             <p><strong>Wild (W01)</strong>: Substitutes for all pay symbols. Own pays: 15× / 40× / 150×</p>
             <p><strong>Bursting Wild (W02)</strong>: Wild that expands 1–4 adjacent cells into W01 after evaluating a win.</p>
             <p><strong>Scatter (SC)</strong>: Pays anywhere. 3 = 2× bet + Free Spins. 4 = 10× bet. 5 = 50× bet.</p>
@@ -893,13 +910,13 @@
           <div class="inf-section-body">
             <p>Three Bonus symbols on reels 1, 3 and 5 trigger the Wheel Feature. The wheel has 7 segments:</p>
             <ul class="inf-list">
-              <li>Jackpot Mini (8%) — Mini jackpot prize</li>
-              <li>Jackpot Minor (12%) — Minor jackpot prize</li>
-              <li>Jackpot Major (4%) — Major jackpot prize</li>
               <li>Jackpot Grand (1%) — Grand jackpot 2000× stake</li>
-              <li>Mansion Bonus (30%) — Pick-me room prize game</li>
-              <li>Buzzsaw Bonus (25%) — Animated saw cuts reveal prizes</li>
-              <li>Mega Hat Bonus (20%) — Hat-covered reels spin for big wins</li>
+              <li>Jackpot Major (4%) — Major jackpot prize</li>
+              <li>Jackpot Minor (12%) — Minor jackpot prize</li>
+              <li>Jackpot Mini (8%) — Mini jackpot prize</li>
+              <li>Pearl Cave Bonus (30%) — Pick-me underwater prize game</li>
+              <li>Kraken Bonus (25%) — Tentacles reveal ocean prizes</li>
+              <li>Mermaid Bonus (20%) — Enchanted reels spin for big wins</li>
             </ul>
             <p>The Wheel Feature can also be purchased — see BUY FEATURE.</p>
           </div>

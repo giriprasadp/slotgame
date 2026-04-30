@@ -42,13 +42,13 @@ export const SYMBOLS: Record<string, SymInfo> = {
   S03:  { id:'S03',  name:'Q',            cat:'basic',    glyph:'Q',  color:'#c24f89' },
   S04:  { id:'S04',  name:'K',            cat:'basic',    glyph:'K',  color:'#c2874f' },
   S05:  { id:'S05',  name:'A',            cat:'basic',    glyph:'A',  color:'#c24f4f' },
-  S06:  { id:'S06',  name:'Gem Blue',     cat:'basic',    glyph:'◆',  color:'#4ab0ea' },
-  S07:  { id:'S07',  name:'Gem Green',    cat:'basic',    glyph:'◆',  color:'#4ed67c' },
-  S08:  { id:'S08',  name:'Gem Red',      cat:'basic',    glyph:'◆',  color:'#e64747' },
-  C01:  { id:'C01',  name:'Pig (Straw)',  cat:'character',glyph:'🐖', color:'#f8c89c' },
-  C02:  { id:'C02',  name:'Pig (Sticks)', cat:'character',glyph:'🐷', color:'#f8c89c' },
-  C03:  { id:'C03',  name:'Pig (Bricks)',cat:'character', glyph:'🐽', color:'#f8c89c' },
-  C04:  { id:'C04',  name:'Wolf',         cat:'character',glyph:'🐺', color:'#3b3030' },
+  S06:  { id:'S06',  name:'Plant',        cat:'basic',    glyph:'🌿', color:'#4ab0ea' },
+  S07:  { id:'S07',  name:'Starfish',     cat:'basic',    glyph:'⭐', color:'#4ed67c' },
+  S08:  { id:'S08',  name:'Fish',         cat:'basic',    glyph:'🐟', color:'#e64747' },
+  C01:  { id:'C01',  name:'Sea Fish',     cat:'character',glyph:'🐠', color:'#ff7043' },
+  C02:  { id:'C02',  name:'Bonus',        cat:'character',glyph:'🐡', color:'#29b6f6' },
+  C03:  { id:'C03',  name:'Free Spin',    cat:'character',glyph:'🐙', color:'#ab47bc' },
+  C04:  { id:'C04',  name:'Jackpot Pearl',cat:'character',glyph:'🦈', color:'#00acc1' },
   W01:  { id:'W01',  name:'Wild',         cat:'wild',     glyph:'W',  color:'#E3A02C' },
   W02:  { id:'W02',  name:'Golden Wild',  cat:'wild',     glyph:'W',  color:'#ffd265' },
   SC01: { id:'SC01', name:'Scatter',      cat:'scatter',  glyph:'★',  color:'#ff7b3a' },
@@ -94,7 +94,7 @@ export const WHEEL_SEGMENTS = [
   'WH_MH','WH_JP','WH_MN','WH_BZ',
 ];
 export const WHEEL_BONUS_NAMES: Record<string, string> = {
-  WH_JP:'Jackpot', WH_MN:'Mansion Bonus', WH_BZ:'Buzzsaw Bonus', WH_MH:'Mega Hat Bonus',
+  WH_JP:'Jackpot', WH_MN:'Pearl Cave Bonus', WH_BZ:'Kraken Bonus', WH_MH:'Mermaid Bonus',
 };
 export const WHEEL_BONUS_COLORS: Record<string, string> = {
   WH_JP:'#E3A02C', WH_MN:'#5BB86E', WH_BZ:'#C85538', WH_MH:'#8855C8',
@@ -145,13 +145,13 @@ export const JACKPOT_TIERS = [
 /* Paytable: multipliers of total bet for 3/4/5 matching symbols.
    Must stay in sync with backend/src/config/game.ts PAYTABLE. */
 export const PAYTABLE: Record<string, [number, number, number]> = {
-  C04: [3.1,  7.8,  38.9 ],  // Wolf — top premium
-  C03: [2.3,  4.7,  23.3 ],  // Pig Bricks
-  C02: [1.6,  3.9,  15.6 ],  // Pig Sticks
-  C01: [1.2,  3.1,  11.7 ],  // Pig Straw
-  S08: [0.8,  2.3,  7.8  ],  // Gem Red
-  S07: [0.6,  1.9,  6.2  ],  // Gem Green
-  S06: [0.5,  1.6,  4.7  ],  // Gem Blue
+  C04: [3.1,  7.8,  38.9 ],  // Jackpot Pearl — top premium
+  C03: [2.3,  4.7,  23.3 ],  // Free Spin
+  C02: [1.6,  3.9,  15.6 ],  // Bonus
+  C01: [1.2,  3.1,  11.7 ],  // Sea Fish
+  S08: [0.8,  2.3,  7.8  ],  // Fish
+  S07: [0.6,  1.9,  6.2  ],  // Starfish
+  S06: [0.5,  1.6,  4.7  ],  // Plant
   S05: [0.3,  1.2,  3.9  ],  // A
   S04: [0.3,  1.1,  3.1  ],  // K
   S03: [0.2,  0.8,  2.3  ],  // Q

@@ -9,25 +9,25 @@
 ═══════════════════════════════════════════════════════════════ */
 :root {
   /* Colours */
-  --c-primary:    #E3A02C;   /* warm gold  — wins, active states, CTAs */
-  --c-secondary:  #A53B2A;   /* wolf-red   — feature ribbons, scatter */
-  --c-tertiary:   #3E6D4F;   /* forest-green — win counters, positive */
-  --c-bg-dark:    #1C1414;   /* main game bg */
-  --c-bg-mid:     #2A1F1F;   /* HUD shelf, cards */
-  --c-bg-light:   #413030;   /* panels */
-  --c-text:       #F4EADE;   /* body text */
-  --c-text-dim:   #B8A99A;   /* metadata */
-  --c-text-mute:  #6B605A;   /* disabled */
-  --c-focus:      #FFC24A;   /* keyboard focus ring */
-  --c-error:      #D64545;   /* errors, max-cap */
-  --c-caution:    #E0A82E;   /* warnings, reality check */
-  --c-success:    #5BB86E;   /* wins, positive state */
-  --c-scrim:      rgba(0,0,0,.6);
+  --c-primary:    #00d4ff;   /* ocean cyan  — wins, active states, CTAs */
+  --c-secondary:  #7b2fff;   /* deep violet — feature ribbons, scatter */
+  --c-tertiary:   #00b894;   /* sea green   — win counters, positive */
+  --c-bg-dark:    #020d1a;   /* deep ocean bg */
+  --c-bg-mid:     #061828;   /* HUD shelf, cards */
+  --c-bg-light:   #0d2a40;   /* panels */
+  --c-text:       #e8f4ff;   /* body text */
+  --c-text-dim:   #7fc4e0;   /* metadata */
+  --c-text-mute:  #3a6a8a;   /* disabled */
+  --c-focus:      #00d4ff;   /* keyboard focus ring */
+  --c-error:      #ff4d6d;   /* errors, max-cap */
+  --c-caution:    #ffb347;   /* warnings, reality check */
+  --c-success:    #00b894;   /* wins, positive state */
+  --c-scrim:      rgba(0,0,0,.65);
 
   /* Gradients */
-  --grad-gold: linear-gradient(180deg, #FFCA63 0%, #E3A02C 50%, #8F5C13 100%);
-  --grad-wolf: linear-gradient(180deg, #D45A47 0%, #A53B2A 50%, #5E1B12 100%);
-  --grad-dark: linear-gradient(180deg, #2c1e1e 0%, #1C1414 100%);
+  --grad-gold: linear-gradient(180deg, #00f0ff 0%, #00a8cc 50%, #005580 100%);
+  --grad-wolf: linear-gradient(180deg, #9b59ff 0%, #7b2fff 50%, #3d00cc 100%);
+  --grad-dark: linear-gradient(180deg, #061828 0%, #020d1a 100%);
 
   /* Spacing scale (4dp base — spec §8.3) */
   --sp-1: 4px;
@@ -65,7 +65,7 @@
 
 html, body {
   width: 100%; height: 100%;
-  background: radial-gradient(ellipse at center, #3a2323 0%, #1C1414 70%, #0c0606 100%);
+  background: #020d1a;
   color: var(--c-text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
@@ -99,36 +99,19 @@ svg { display: block; }
 ═══════════════════════════════════════════════════════════════ */
 .splash {
   position: fixed; inset: 0; z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(ellipse at center, #3a2323 0%, #1C1414 70%, #0c0606 100%);
+  overflow: hidden;
+  background: url('/pearls/splash-art.png') center/cover no-repeat #020d1a;
 }
 .splash-inner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;
   display: flex; flex-direction: column; align-items: center;
-  gap: var(--sp-6); padding: var(--sp-6);
-  max-width: 480px; width: 100%; text-align: center;
+  gap: var(--sp-2); padding: var(--sp-8) var(--sp-6) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  background: linear-gradient(to top, rgba(2,8,24,.97) 0%, rgba(2,8,24,.85) 40%, rgba(2,8,24,.4) 70%, rgba(2,8,24,0) 100%);
+  opacity: 1; transition: opacity .15s ease;
 }
-.splash-brand { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
-.splash-wolf  { font-size: 72px; line-height: 1; filter: drop-shadow(0 0 20px rgba(227,160,44,.4)); }
-.splash-title {
-  font-family: "Cinzel", Georgia, serif;
-  font-size: 48px; font-weight: 900;
-  letter-spacing: 6px;
-  background: var(--grad-gold);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: none;
-}
-.splash-sub {
-  color: var(--c-text-dim); font-size: 12px;
-  letter-spacing: 4px; font-weight: 500;
-}
-.splash-tip-wrap {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(227,160,44,.15);
-  border-radius: var(--r-md);
-  padding: var(--sp-3) var(--sp-4);
-  min-height: 48px; display: flex; align-items: center; justify-content: center;
-  width: 100%;
-}
+.splash-brand { display: none; }
+.splash-tip-wrap { display: none; }
 .splash-tip {
   color: var(--c-text-dim); font-size: 13px;
   line-height: 1.5; text-align: center;
@@ -143,8 +126,8 @@ svg { display: block; }
 }
 .splash-bar {
   height: 100%; width: 0%;
-  background: var(--grad-gold);
-  box-shadow: 0 0 12px rgba(227,160,44,.6);
+  background: linear-gradient(90deg, #00c8ff 0%, #00e5ff 50%, #00a8cc 100%);
+  box-shadow: 0 0 12px rgba(0,200,255,.6);
   transition: width .3s ease-out;
   border-radius: var(--r-pill);
 }
@@ -189,8 +172,10 @@ svg { display: block; }
   grid-area: top;
   display: flex; align-items: center;
   gap: var(--sp-2); padding: 0 var(--sp-2) 0 var(--sp-1);
-  background: linear-gradient(180deg, #2d2020 0%, #1e1515 100%);
-  border-bottom: 1px solid rgba(0,0,0,.5);
+  background: linear-gradient(180deg, rgba(1,8,22,.82) 0%, rgba(1,6,18,.72) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(0,180,255,.08);
   box-shadow: var(--sh-hud);
   z-index: 10;
 }
@@ -277,8 +262,10 @@ svg { display: block; }
   display: flex; align-items: center; justify-content: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-6);
-  background: var(--c-bg-dark);
-  border-bottom: 1px solid rgba(255,255,255,.04);
+  background: rgba(1,8,22,.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(0,180,255,.06);
   position: relative;
 }
 .mult-lbl {
@@ -336,9 +323,11 @@ svg { display: block; }
   grid-area: fs;
   display: flex; align-items: center;
   gap: 0; overflow: hidden;
-  background: linear-gradient(90deg, #5E1B12 0%, #A53B2A 40%, #A53B2A 60%, #5E1B12 100%);
-  border-bottom: 2px solid #3d0d07;
-  box-shadow: 0 2px 12px rgba(165,59,42,.4);
+  background: linear-gradient(90deg, rgba(0,60,120,.85) 0%, rgba(0,100,180,.75) 40%, rgba(0,100,180,.75) 60%, rgba(0,60,120,.85) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 2px solid rgba(0,180,255,.25);
+  box-shadow: 0 2px 12px rgba(0,150,255,.25);
 }
 .fs-block {
   display: flex; flex-direction: column;
@@ -416,9 +405,11 @@ svg { display: block; }
   grid-area: wins;
   display: flex; align-items: center;
   padding: 0 var(--sp-4);
-  background: linear-gradient(0deg, #201616 0%, var(--c-bg-dark) 100%);
-  border-top: 1px solid rgba(255,255,255,.04);
-  border-bottom: 1px solid rgba(0,0,0,.4);
+  background: linear-gradient(0deg, rgba(1,8,22,.75) 0%, rgba(1,6,18,.55) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-top: 1px solid rgba(0,180,255,.06);
+  border-bottom: 1px solid rgba(0,0,0,.3);
   gap: var(--sp-4);
 }
 .ws-group {
@@ -457,8 +448,10 @@ svg { display: block; }
   align-items: center;
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-4) max(var(--sp-2), env(safe-area-inset-bottom));
-  background: linear-gradient(0deg, #2d2020 0%, #1e1515 100%);
-  border-top: 1px solid rgba(0,0,0,.5);
+  background: linear-gradient(0deg, rgba(1,8,22,.88) 0%, rgba(1,6,18,.72) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(0,180,255,.08);
   box-shadow: 0 -2px 8px rgba(0,0,0,.3);
 }
 
@@ -474,7 +467,7 @@ svg { display: block; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
   transition: background .12s, transform .08s;
 }
-.bet-btn:hover  { background: #4d3838; }
+.bet-btn:hover  { background: #0d3a58; }
 .bet-btn:active { transform: scale(.94); }
 .bet-btn.bet-max {
   width: auto; padding: 0 10px;
@@ -544,7 +537,7 @@ svg { display: block; }
   transition: background .12s, color .12s, transform .08s, box-shadow .12s;
   min-width: 52px; min-height: 52px;
 }
-.action-pill:hover  { background: #4d3838; color: var(--c-text); }
+.action-pill:hover  { background: #0d3a58; color: var(--c-text); }
 .action-pill:active { transform: scale(.95); }
 .action-pill[disabled], .action-pill.disabled {
   opacity: .35; pointer-events: none;

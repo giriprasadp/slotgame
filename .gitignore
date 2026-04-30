@@ -50,6 +50,19 @@ coverage/
 # ── Temp demo project ────────────────────────────────────────────────────────
 temp demo client/
 
+# ── PSD source files & extraction scripts (local dev only) ───────────────────
+Pearls_of_the_abyss/
+*.psd
+extract-*.mjs
+inspect-layers.mjs
+inspect-layers/
+layer-positions.mjs
+list-*.mjs
+debug-psd.mjs
+test-canvas.mjs
+package.json
+package-lock.json
+
 # ── Design documents (keep locally, not in repo) ──────────────────────────────
 *.xlsx
 *.xls
