@@ -48,7 +48,7 @@ export const SYMBOLS: Record<string, SymInfo> = {
   C01:  { id:'C01',  name:'Sea Fish',     cat:'character',glyph:'🐠', color:'#ff7043' },
   C02:  { id:'C02',  name:'Bonus',        cat:'character',glyph:'🐡', color:'#29b6f6' },
   C03:  { id:'C03',  name:'Free Spin',    cat:'character',glyph:'🐙', color:'#ab47bc' },
-  C04:  { id:'C04',  name:'Jackpot Pearl',cat:'character',glyph:'🦈', color:'#00acc1' },
+  C04:  { id:'C04',  name:'Big Bad Wolf',  cat:'character',glyph:'🐺', color:'#00acc1' },
   W01:  { id:'W01',  name:'Wild',         cat:'wild',     glyph:'W',  color:'#E3A02C' },
   W02:  { id:'W02',  name:'Golden Wild',  cat:'wild',     glyph:'W',  color:'#ffd265' },
   SC01: { id:'SC01', name:'Scatter',      cat:'scatter',  glyph:'★',  color:'#ff7b3a' },
@@ -94,7 +94,7 @@ export const WHEEL_SEGMENTS = [
   'WH_MH','WH_JP','WH_MN','WH_BZ',
 ];
 export const WHEEL_BONUS_NAMES: Record<string, string> = {
-  WH_JP:'Jackpot', WH_MN:'Pearl Cave Bonus', WH_BZ:'Kraken Bonus', WH_MH:'Mermaid Bonus',
+  WH_JP:'Jackpot', WH_MN:'Straw House Bonus', WH_BZ:'Stick House Bonus', WH_MH:'Brick House Bonus',
 };
 export const WHEEL_BONUS_COLORS: Record<string, string> = {
   WH_JP:'#E3A02C', WH_MN:'#5BB86E', WH_BZ:'#C85538', WH_MH:'#8855C8',
@@ -145,7 +145,7 @@ export const JACKPOT_TIERS = [
 /* Paytable: multipliers of total bet for 3/4/5 matching symbols.
    Must stay in sync with backend/src/config/game.ts PAYTABLE. */
 export const PAYTABLE: Record<string, [number, number, number]> = {
-  C04: [3.1,  7.8,  38.9 ],  // Jackpot Pearl — top premium
+  C04: [3.1,  7.8,  38.9 ],  // Big Bad Wolf — top premium
   C03: [2.3,  4.7,  23.3 ],  // Free Spin
   C02: [1.6,  3.9,  15.6 ],  // Bonus
   C01: [1.2,  3.1,  11.7 ],  // Sea Fish
