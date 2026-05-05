@@ -215,7 +215,7 @@ export const CHAIN_SAFETY_CAP = 50;
  *   Set RTP_TARGET to the desired value (0.94 = 94%, 0.9610 = 96.10%, etc.)
  * ─────────────────────────────────────────────────────────────────────────── */
 export const RTP_TARGET   = 0.9610;  // Operator-configurable certified RTP
-export const NATURAL_RTP = 0.850924;  // Measured via `npx tsx src/rtp-sim.ts --measure --spins 5000000` (85.09%).
+export const NATURAL_RTP = 0.846342;  // Measured via `npx tsx src/rtp-sim.ts --measure --spins 10000000` (84.63%).
                                       // Line/scatter wins are fully calibrated; residual gap comes
                                       // from MegaHat using hardcoded prize ranges (not config-driven).
 export const PAYOUT_SCALE = RTP_TARGET / NATURAL_RTP; // ≈1.1247 — applied at credit time

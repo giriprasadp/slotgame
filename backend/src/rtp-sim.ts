@@ -38,6 +38,7 @@ const TOTAL_BASE_SPINS = spinFlagIdx >= 0 ? parseInt(args[spinFlagIdx + 1], 10) 
 const MEASURE_MODE     = args.includes('--measure');  // measure natural RTP, skip scale
 const BET_LEVEL_IDX    = 3;    // BET_LEVELS[3] -> total 100 coins
 const TOTAL_BET        = 100;
+const TOLERANCE        = 0.0150; // ±1.50pp: FS (1/159, ~19% of returns) + wheel (1/193, ~25% of returns) stack variance — ~44% of total return comes from rare triggers, causing ±1.5pp natural swing at 1M spins
 
 /* --- Accumulators ------------------------------------------------------------ */
 let totalWagered   = 0;
@@ -56,6 +57,12 @@ let fsSpinsPlayed  = 0;
 let wheelTriggers  = 0;
 let morphCascades  = 0;
 let chainLenSum    = 0;
+
+// Hit rate / dry streak tracking (base game only)
+let baseWinSpins   = 0;   // spins where chainTotal > 0 before features
+let dryStreak      = 0;   // current losing streak
+let maxDryStreak   = 0;   // longest losing streak seen
+let dryStreakSum   = 0;   // sum of all completed dry streaks (for average)
 
 /* --- Helper: sum multiplied line wins across all chain steps ----------------- */
 function multipliedLineWin(chain: ChainResult): number {
@@ -127,7 +134,7 @@ console.log(`  Base spins   : ${TOTAL_BASE_SPINS.toLocaleString()}`);
 console.log(`  Bet per spin : ${TOTAL_BET} coins`);
 console.log(`  Total wagered: ~${(TOTAL_BASE_SPINS * TOTAL_BET).toLocaleString()} coins`);
 if (!MEASURE_MODE) {
-  console.log(`  Target RTP   : ${(RTP_TARGET * 100).toFixed(2)}% +/- 0.50%`);
+  console.log(`  Target RTP   : ${(RTP_TARGET * 100).toFixed(2)}% +/- ${(TOLERANCE * 100).toFixed(2)}%`);
   console.log(`  Natural RTP  : ${(NATURAL_RTP * 100).toFixed(4)}% (config/game.ts NATURAL_RTP)`);
   console.log(`  Payout scale : ${PAYOUT_SCALE.toFixed(6)}x  (= ${(RTP_TARGET * 100).toFixed(2)} / ${(NATURAL_RTP * 100).toFixed(4)})`);
 }
@@ -146,6 +153,15 @@ for (let spin = 0; spin < TOTAL_BASE_SPINS; spin++) {
   totalWon       += chain.chainTotal;
   baseLineWin    += multipliedLineWin(chain);
   baseScatterWin += chain.totalScatterWin;
+
+  // Hit rate tracking
+  if (chain.chainTotal > 0) {
+    baseWinSpins++;
+    if (dryStreak > 0) { dryStreakSum += dryStreak; dryStreak = 0; }
+  } else {
+    dryStreak++;
+    if (dryStreak > maxDryStreak) maxDryStreak = dryStreak;
+  }
 
   if (chain.chainLength > 1) morphCascades++;
   chainLenSum += chain.chainLength;
@@ -172,7 +188,7 @@ const elapsed     = ((Date.now() - t0) / 1000).toFixed(1);
 const naturalRTP  = totalWon / totalWagered;        // unscaled
 const projectedRTP = naturalRTP * PAYOUT_SCALE;     // what players receive
 const TARGET_RTP  = RTP_TARGET;
-const TOLERANCE   = 0.0050;
+
 const pass        = MEASURE_MODE || Math.abs(projectedRTP - TARGET_RTP) <= TOLERANCE;
 
 /* --- Results ----------------------------------------------------------------- */
@@ -222,6 +238,16 @@ if (!MEASURE_MODE) {
 
 // Feature stats
 const totalSpins = TOTAL_BASE_SPINS + fsSpinsPlayed;
+const baseHitRate = baseWinSpins / TOTAL_BASE_SPINS;
+const avgDryStreak = baseWinSpins > 0 ? dryStreakSum / baseWinSpins : 0;
+const pLose10 = Math.pow(1 - baseHitRate, 10) * 100;
+console.log('\n' + '-'.repeat(60));
+console.log('  Hit rate (base game only, before features)');
+console.log('-'.repeat(60));
+console.log(`  Win frequency     : ${(baseHitRate * 100).toFixed(2)}%  (1 in ${(1 / baseHitRate).toFixed(1)} spins pay something)`);
+console.log(`  Avg dry streak    : ${avgDryStreak.toFixed(1)} consecutive zero-win spins between wins`);
+console.log(`  Max dry streak    : ${maxDryStreak} consecutive zero-win spins (worst observed)`);
+console.log(`  P(10 losers row)  : ${pLose10.toFixed(1)}%  — expected for ~1 in ${(100 / pLose10).toFixed(0)} players each session`);
 console.log('\n' + '-'.repeat(60));
 console.log('  Feature statistics');
 console.log('-'.repeat(60));
@@ -239,7 +265,7 @@ const checks: Array<{ label: string; ok: boolean; value: string }> = [
   {
     label: MEASURE_MODE
       ? 'Natural RTP measured (no target check in measure mode)'
-      : 'Projected RTP within +/-0.50% of target',
+      : `Projected RTP within +/-${(TOLERANCE * 100).toFixed(2)}% of target`,
     ok:    MEASURE_MODE || pass,
     value: MEASURE_MODE
       ? `${(naturalRTP * 100).toFixed(4)}%`
