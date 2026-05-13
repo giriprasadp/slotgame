@@ -72,6 +72,40 @@ export const GOLDEN_SYM_POOL: [string, number][] = [
   ['S07',9],['S08',8],['C01',7],['C02',6],['C03',5],['C04',4],
 ];
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   HIT FREQUENCY TUNING GUIDE
+   Current measured hit rate: ~20% (1 in 5 base spins pay something)
+   ─────────────────────────────────────────────────────────────────────────────
+   Hit frequency is determined solely by reel strip composition below.
+   No blank/filler stops exist currently — every stop position holds a paying
+   symbol, which keeps hit rate at ~20% driven by non-overlapping payline combos.
+
+   TO LOWER hit frequency (e.g. target ~15%):
+     • Insert blank stops (e.g. 'BL') into each base strip.
+       Rule of thumb: +1 blank per 10 stops ≈ -1.5pp hit rate.
+       Example: Reel 1 (60 stops) → add 8 'BL' stops → ~15% hit rate.
+     • Register 'BL' in SYMBOLS (id only, no PAYTABLE entry so it never pays).
+     • After editing strips, run: npx tsx src/rtp-sim.ts --measure --spins 10000000
+       then update NATURAL_RTP above with the printed value.
+
+   TO RAISE hit frequency (e.g. target ~25%):
+     • Replace some high-value symbols (C01–C04, W01–W02) with duplicates of
+       low-value ones (S01–S04) — more copies = more winning combos per window.
+     • Or shorten strip lengths (removes stop variance, denser clusters).
+
+   LEVERS (in order of impact):
+     1. Add/remove blank 'BL' stops          → strongest lever, direct effect
+     2. Duplicate low-value symbols (S01–S04) → raises freq, small RTP ↑
+     3. Add/remove wild stops (W01/W02)       → moderate effect on both
+     4. Change strip lengths                  → use to fine-tune after above
+
+   After ANY strip change:
+     1. npx tsx src/rtp-sim.ts --measure --spins 10000000  → get new NATURAL_RTP
+     2. Update NATURAL_RTP constant above
+     3. Update "Hit Frequency" in client/index.html (Settings → About)
+        and client/src/Game.ts (Paytable → Game Stats tab) if it changed >1pp
+   ───────────────────────────────────────────────────────────────────────────── */
+
 /* Exact ordered reel strips from design sheet (GDD §3.2 / Reel Strips Base sheet).
    stopIdx = RNG.nextInt(0, len) → center row; top = stop-1, bottom = stop+1 (wrapping). */
 export const REEL_STRIPS_BASE: string[][] = [
@@ -215,7 +249,7 @@ export const CHAIN_SAFETY_CAP = 50;
  *   Set RTP_TARGET to the desired value (0.94 = 94%, 0.9610 = 96.10%, etc.)
  * ─────────────────────────────────────────────────────────────────────────── */
 export const RTP_TARGET   = 0.9610;  // Operator-configurable certified RTP
-export const NATURAL_RTP = 0.846342;  // Measured via `npx tsx src/rtp-sim.ts --measure --spins 10000000` (84.63%).
+export const NATURAL_RTP = 0.846679;  // Measured via `npx tsx src/rtp-sim.ts --measure --spins 10000000` (84.67%).
                                       // Line/scatter wins are fully calibrated; residual gap comes
                                       // from MegaHat using hardcoded prize ranges (not config-driven).
 export const PAYOUT_SCALE = RTP_TARGET / NATURAL_RTP; // ≈1.1247 — applied at credit time

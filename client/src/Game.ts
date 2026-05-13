@@ -3862,8 +3862,8 @@ export class Game {
             <div class="pt-card-title">📊 Game Stats</div>
             <div class="pt-card-desc">
               <table class="pt-mini-table">
-                <tr><td>RTP</td><td><b>95.5%</b></td></tr>
-                <tr><td>Volatility</td><td><b>Medium-High</b></td></tr>
+                <tr><td>RTP</td><td><b>96.10%</b></td></tr>
+                <tr><td>Volatility</td><td><b>High</b></td></tr>
                 <tr><td>Grid</td><td><b>5 reels × 3 rows</b></td></tr>
                 <tr><td>Paylines</td><td><b>10 fixed</b></td></tr>
                 <tr><td>Max win</td><td><b>10,000× bet</b></td></tr>
